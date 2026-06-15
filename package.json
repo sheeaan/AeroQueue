@@ -1,0 +1,30 @@
+{
+  "name": "aeroqueue",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Client-side discrete-event simulation & operations-research lab for aircraft boarding strategies.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "verify:phase2": "tsx scripts/phase2-harness.ts"
+  },
+  "dependencies": {
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.3",
+    "pixi.js": "^8.6.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.1.6",
+    "tsx": "^4.19.2"
+  }
+}
