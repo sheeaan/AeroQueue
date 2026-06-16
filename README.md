@@ -15,6 +15,9 @@ kinematics, aisle interference, luggage-stowage bottlenecks, and seat-interferen
 
 ---
 
+<img width="960" height="540" alt="image" src="https://github.com/user-attachments/assets/96460902-85e8-4417-8046-d8ef88ca9bdb" />
+
+
 ## Architectural pillars
 
 | Concern | Decision | Why |
