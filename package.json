@@ -10,20 +10,23 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "verify:phase2": "tsx scripts/phase2-harness.ts",
-    "verify:phase4": "tsx scripts/phase4-harness.ts"
+    "verify:phase4": "tsx scripts/phase4-harness.ts",
+    "verify:phase5": "tsx scripts/phase5-harness.ts"
   },
   "dependencies": {
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.3",
-    "pixi.js": "^8.6.6"
+    "pixi.js": "^8.6.6",
+    "katex": "^0.16.11"
   },
   "devDependencies": {
     "typescript": "^5.7.3",
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
+    "@types/katex": "^0.16.7",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.1.6",
     "tsx": "^4.19.2"

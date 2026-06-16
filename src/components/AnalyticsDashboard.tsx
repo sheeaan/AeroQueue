@@ -1,57 +1,97 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { DistributionChart } from '@/components/DistributionChart';
+import { useSimulationContext } from '@/components/SimulationProvider';
 import type { MonteCarloResult } from '@/simulation/analysis/statistics';
 import { DEFAULT_STRATEGIES } from '@/simulation/strategies';
 import type { StrategyId } from '@/simulation/strategies/BoardingStrategy';
 import { useSimulationStore } from '@/state/simulationStore';
-import type { MonteCarloRequest, MonteCarloResponse } from '@/workers/monteCarlo.worker';
+import type { EvolveRequest, MonteCarloRequest, WorkerResponse } from '@/workers/monteCarlo.worker';
 
 const ITERATIONS = 1000;
+const GA_GENERATIONS = 60;
+const GA_POPULATION = 60;
+
+type Activity = 'idle' | 'monte-carlo' | 'evolve';
 
 interface ResultMeta {
   strategyId: StrategyId;
   isSimpleMode: boolean;
 }
 
+interface GaSummary {
+  fitness: number;
+  initialBest: number;
+  generations: number;
+}
+
 function strategyName(id: StrategyId): string {
+  if (id === 'custom') return '🧬 Evolved (GA)';
   return DEFAULT_STRATEGIES.find((strategy) => strategy.id === id)?.name ?? id;
 }
 
 /**
- * Statistical analytics panel. Offloads `ITERATIONS` headless simulations to the
- * Monte-Carlo Web Worker (keeping the main thread responsive), shows live
- * progress, and reports the resulting mean (μ) and variance (σ²) for the
- * currently selected strategy + mode.
+ * Statistical analytics + optimization panel. Offloads both the Monte-Carlo
+ * batch and the Genetic-Algorithm search to the Web Worker, visualises the
+ * resulting boarding-time distribution, and loads the GA's fittest sequence
+ * straight into the live visualizer.
  */
 export function AnalyticsDashboard() {
+  const controller = useSimulationContext();
   const strategyId = useSimulationStore((s) => s.strategyId);
   const isSimpleMode = useSimulationStore((s) => s.isSimpleMode);
+  const setStrategy = useSimulationStore((s) => s.setStrategy);
   const result = useSimulationStore((s) => s.monteCarlo);
   const setResult = useSimulationStore((s) => s.setMonteCarlo);
 
   const workerRef = useRef<Worker | null>(null);
-  const [running, setRunning] = useState(false);
+  const [activity, setActivity] = useState<Activity>('idle');
   const [progress, setProgress] = useState(0);
+  const [samples, setSamples] = useState<number[] | null>(null);
   const [meta, setMeta] = useState<ResultMeta | null>(null);
+  const [gaStatus, setGaStatus] = useState<{ generation: number; total: number; best: number } | null>(null);
+  const [ga, setGa] = useState<GaSummary | null>(null);
 
   useEffect(() => {
-    // Instantiated the Next.js-compatible way so webpack bundles the worker as
-    // its own chunk. Worker APIs are client-only, so this runs in an effect.
     const worker = new Worker(new URL('../workers/monteCarlo.worker.ts', import.meta.url), {
       type: 'module',
     });
     workerRef.current = worker;
 
-    worker.onmessage = (event: MessageEvent<MonteCarloResponse>) => {
+    let initialBest = Infinity;
+
+    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const message = event.data;
-      if (message.type === 'progress') {
-        setProgress(message.completed / message.total);
-      } else {
-        setResult(message.result);
-        setMeta({ strategyId: message.strategyId, isSimpleMode: message.isSimpleMode });
-        setProgress(1);
-        setRunning(false);
+      switch (message.type) {
+        case 'mc-progress':
+          setProgress(message.completed / message.total);
+          break;
+        case 'mc-done':
+          setResult(message.result);
+          setSamples(message.samples);
+          setMeta({ strategyId: message.strategyId, isSimpleMode: message.isSimpleMode });
+          setProgress(1);
+          setActivity('idle');
+          break;
+        case 'evolve-progress':
+          if (message.generation === 0) initialBest = message.bestFitness;
+          setProgress((message.generation + 1) / message.total);
+          setGaStatus({ generation: message.generation + 1, total: message.total, best: message.bestFitness });
+          break;
+        case 'evolve-done':
+          // Load the fittest sequence into the live visualizer as the 'custom' strategy.
+          controller.loadCustomOrder(message.order);
+          setStrategy('custom');
+          setGa({
+            fitness: message.fitness,
+            initialBest,
+            generations: message.history.length,
+          });
+          setGaStatus(null);
+          setProgress(1);
+          setActivity('idle');
+          break;
       }
     };
 
@@ -59,16 +99,39 @@ export function AnalyticsDashboard() {
       worker.terminate();
       workerRef.current = null;
     };
-  }, [setResult]);
+  }, [controller, setResult, setStrategy]);
 
-  const run = () => {
+  const busy = activity !== 'idle';
+
+  const runMonteCarlo = () => {
     const worker = workerRef.current;
-    if (running || !worker) return;
-    setRunning(true);
+    if (busy || !worker) return;
+    setActivity('monte-carlo');
     setProgress(0);
     setResult(null);
+    setSamples(null);
     setMeta(null);
-    const request: MonteCarloRequest = { strategyId, iterations: ITERATIONS, isSimpleMode };
+    const request: MonteCarloRequest = {
+      kind: 'monte-carlo',
+      strategyId,
+      iterations: ITERATIONS,
+      isSimpleMode,
+    };
+    worker.postMessage(request);
+  };
+
+  const runEvolve = () => {
+    const worker = workerRef.current;
+    if (busy || !worker) return;
+    setActivity('evolve');
+    setProgress(0);
+    setGa(null);
+    setGaStatus({ generation: 0, total: GA_GENERATIONS, best: Infinity });
+    const request: EvolveRequest = {
+      kind: 'evolve',
+      generations: GA_GENERATIONS,
+      populationSize: GA_POPULATION,
+    };
     worker.postMessage(request);
   };
 
@@ -77,6 +140,8 @@ export function AnalyticsDashboard() {
     [meta, strategyId, isSimpleMode],
   );
 
+  const pct = Math.round(progress * 100);
+
   return (
     <section className="analytics">
       <h2 className="analytics-title">Monte-Carlo Analytics</h2>
@@ -84,29 +149,53 @@ export function AnalyticsDashboard() {
         {strategyName(strategyId)} · {isSimpleMode ? 'Simple' : 'Realism'} mode
       </p>
 
-      <button className="run-button" onClick={run} disabled={running}>
-        {running ? `Running… ${Math.round(progress * 100)}%` : `Run ${ITERATIONS} Simulations`}
+      <button className="run-button" onClick={runMonteCarlo} disabled={busy}>
+        {activity === 'monte-carlo' ? `Running… ${pct}%` : `Run ${ITERATIONS} Simulations`}
       </button>
 
-      {running && (
-        <div className="progress" role="progressbar" aria-valuenow={Math.round(progress * 100)}>
-          <div className="progress-fill" style={{ width: `${Math.round(progress * 100)}%` }} />
+      <button className="run-button evolve-button" onClick={runEvolve} disabled={busy}>
+        {activity === 'evolve'
+          ? gaStatus
+            ? `Evolving… gen ${gaStatus.generation}/${gaStatus.total} · best ${gaStatus.best === Infinity ? '—' : gaStatus.best.toFixed(0)}`
+            : `Evolving… ${pct}%`
+          : '🧬 Evolve Optimal Sequence'}
+      </button>
+
+      {busy && (
+        <div className="progress" role="progressbar" aria-valuenow={pct}>
+          <div className="progress-fill" style={{ width: `${pct}%` }} />
         </div>
       )}
 
-      {result && result.runs > 0 && (
-        <ResultView result={result} meta={meta} stale={stale} />
+      {ga && (
+        <div className="ga-result">
+          <p className="ga-headline">
+            Evolved sequence loaded — press <strong>Play</strong> to watch it.
+          </p>
+          <div className="stat-row">
+            <span>E(T) {ga.fitness.toFixed(0)} ticks</span>
+            <span>
+              gen 0 → {ga.generations}: {ga.initialBest.toFixed(0)} → {ga.fitness.toFixed(0)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {result && result.runs > 0 && samples && (
+        <MonteCarloResultView result={result} samples={samples} meta={meta} stale={stale} />
       )}
     </section>
   );
 }
 
-function ResultView({
+function MonteCarloResultView({
   result,
+  samples,
   meta,
   stale,
 }: {
   result: MonteCarloResult;
+  samples: number[];
   meta: ResultMeta | null;
   stale: boolean;
 }) {
@@ -114,8 +203,7 @@ function ResultView({
     <div className="analytics-result">
       {meta && (
         <p className="analytics-for">
-          {result.runs} runs · {strategyName(meta.strategyId)} ·{' '}
-          {meta.isSimpleMode ? 'Simple' : 'Realism'}
+          {result.runs} runs · {strategyName(meta.strategyId)} · {meta.isSimpleMode ? 'Simple' : 'Realism'}
           {stale && <span className="stale-tag">selection changed</span>}
         </p>
       )}
@@ -131,6 +219,9 @@ function ResultView({
           <div className="stat-unit">ticks²</div>
         </div>
       </div>
+
+      <DistributionChart samples={samples} />
+
       <div className="stat-row">
         <span>σ {result.stdDev.toFixed(1)}</span>
         <span>

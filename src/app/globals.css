@@ -416,3 +416,184 @@ code {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Masthead + notebook trigger ─────────────────────────────────────── */
+.masthead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.notebook-button {
+  white-space: nowrap;
+}
+
+/* ── Genetic-algorithm controls + result ─────────────────────────────── */
+.evolve-button {
+  background: #7c3aed;
+}
+
+.ga-result {
+  background: #0e1626;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.ga-headline {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+/* ── Distribution chart (histogram + CDF) ────────────────────────────── */
+.dist-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #0e1626;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.dist-bar {
+  fill: rgba(78, 161, 255, 0.55);
+}
+
+.dist-cdf {
+  fill: none;
+  stroke: #fbbf24;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.dist-mean {
+  stroke: #f87171;
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.dist-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.dist-label {
+  fill: var(--muted);
+  font-size: 9px;
+}
+
+.dist-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border-radius: 2px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.swatch-bar {
+  background: rgba(78, 161, 255, 0.7);
+}
+
+.swatch-cdf {
+  background: #fbbf24;
+}
+
+.dist-spread {
+  margin-left: auto;
+}
+
+/* ── Engineering Notebook modal ──────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 6, 16, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.modal {
+  width: min(720px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+.notebook-body {
+  padding: 4px 22px 24px;
+}
+
+.notebook-body section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.notebook-body section:last-child {
+  border-bottom: none;
+}
+
+.notebook-body h3 {
+  font-size: 14px;
+  color: var(--accent);
+  margin: 0 0 8px;
+}
+
+.notebook-body p {
+  color: var(--text);
+  line-height: 1.65;
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.tex-block {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 14px 0;
+  text-align: center;
+}
+
+.tex-inline {
+  white-space: nowrap;
+}

@@ -16,7 +16,7 @@ for (const isSimpleMode of [false, true]) {
   console.log(`\n=== ${isSimpleMode ? 'SIMPLE (deterministic)' : 'REALISM (stochastic)'} — ${ITERATIONS} runs ===`);
   console.log('strategy'.padEnd(16), 'mean μ'.padStart(9), 'var σ²'.padStart(10), 'sd σ'.padStart(8));
   for (const strategyId of STRATEGIES) {
-    const r = runMonteCarlo({ strategyId, iterations: ITERATIONS, isSimpleMode });
+    const { result: r } = runMonteCarlo({ kind: 'monte-carlo', strategyId, iterations: ITERATIONS, isSimpleMode });
     console.log(
       strategyId.padEnd(16),
       r.mean.toFixed(1).padStart(9),

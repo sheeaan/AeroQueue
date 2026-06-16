@@ -39,6 +39,7 @@ export function ControlPanel() {
               {strategy.name}
             </option>
           ))}
+          {strategyId === 'custom' && <option value="custom">🧬 Evolved (GA)</option>}
         </select>
       </div>
 

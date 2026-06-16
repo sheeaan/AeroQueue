@@ -41,6 +41,8 @@ export class SimulationController {
   private coarseSink: CoarseSink | null = null;
   private readonly seed: number;
   private currentStrategy: StrategyId = 'steffen-perfect';
+  /** Explicit boarding order for the 'custom' strategy (e.g. a GA result). */
+  private customOrder: SeatId[] | null = null;
 
   constructor(config: SimulationConfig) {
     this.engine = new SimulationEngine(config);
@@ -66,14 +68,25 @@ export class SimulationController {
   loadStrategy(strategyId: StrategyId): void {
     this.pause();
     this.currentStrategy = strategyId;
-    const strategy = getStrategy(strategyId);
     const cabin = this.engine.cabin;
-    const order = strategy
-      ? strategy.generateOrder(cabin, new Random(this.seed ^ 0x9e3779b9))
-      : cabin.seats.map((seat) => seat.id);
+    let order: SeatId[];
+    if (strategyId === 'custom' && this.customOrder) {
+      order = this.customOrder.slice();
+    } else {
+      const strategy = getStrategy(strategyId);
+      order = strategy
+        ? strategy.generateOrder(cabin, new Random(this.seed ^ 0x9e3779b9))
+        : cabin.seats.map((seat) => seat.id);
+    }
     this.engine.initialize(order);
     this.pushCoarse();
     this.emitFrame();
+  }
+
+  /** Load an explicit boarding order (e.g. the GA's evolved sequence) as 'custom'. */
+  loadCustomOrder(order: ReadonlyArray<SeatId>): void {
+    this.customOrder = order.slice();
+    this.loadStrategy('custom');
   }
 
   /**

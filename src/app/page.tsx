@@ -1,3 +1,4 @@
+import { EngineeringNotebook } from '@/components/EngineeringNotebook';
 import { SimulationView } from '@/components/SimulationView';
 
 /**
@@ -13,12 +14,18 @@ import { SimulationView } from '@/components/SimulationView';
 export default function Home() {
   return (
     <main className="shell">
-      <p className="eyebrow">AeroQueue · Phase 4</p>
-      <h1>Aircraft Boarding Simulation Lab</h1>
+      <div className="masthead">
+        <div>
+          <p className="eyebrow">AeroQueue · Phase 5</p>
+          <h1>Aircraft Boarding Simulation Lab</h1>
+        </div>
+        <EngineeringNotebook />
+      </div>
       <p className="lede">
         A client-side discrete-event simulation rendered with PixiJS, with a background Monte-Carlo
-        engine for statistical analysis. Pick a strategy, toggle Realism / Simple mode, and run 1000
-        headless simulations off the main thread to measure expected boarding time and its variance.
+        engine and a Genetic-Algorithm optimizer. Pick a strategy, toggle Realism / Simple mode, run
+        1000 headless simulations to chart the boarding-time distribution, or evolve an optimal
+        sequence and watch the AI-generated strategy play out.
       </p>
 
       <SimulationView />
