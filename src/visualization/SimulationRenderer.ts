@@ -3,7 +3,7 @@ import type { Ticker } from 'pixi.js';
 import type { CabinLayout } from '@/simulation/domain/Grid';
 import type { SimulationSnapshot } from '@/simulation/engine/SimulationEngine';
 import { AgentRenderer } from './AgentRenderer';
-import { createCabinLayer } from './CabinRenderer';
+import { computeAnatomy, createCabinLayer } from './CabinRenderer';
 import { COLOR_CABIN_BG } from './colors';
 import { createGeometry } from './geometry';
 import { HeatmapRenderer } from './HeatmapRenderer';
@@ -31,11 +31,15 @@ export class SimulationRenderer {
 
   static async create(host: HTMLElement, cabin: CabinLayout): Promise<SimulationRenderer> {
     const geo = createGeometry(cabin);
+    const anatomy = computeAnatomy(geo);
+    const { frame } = anatomy;
 
     const app = new Application();
     await app.init({
-      width: geo.width,
-      height: geo.height,
+      // Canvas is enlarged by the aircraft frame so the nose, tail, wings and jet
+      // bridge are never clipped.
+      width: geo.width + frame.left + frame.right,
+      height: geo.height + frame.top + frame.bottom,
       background: COLOR_CABIN_BG,
       backgroundAlpha: 1,
       antialias: true,
@@ -50,10 +54,14 @@ export class SimulationRenderer {
     canvas.style.display = 'block';
     host.appendChild(canvas);
 
+    // Offset the whole world by the frame so the seat grid (which still uses raw
+    // geo coordinates) sits perfectly aligned inside the fuselage. Agents and the
+    // heatmap are children of `world`, so their coordinate mapping is preserved.
     const world = new Container();
+    world.position.set(frame.left, frame.top);
     app.stage.addChild(world);
 
-    world.addChild(createCabinLayer(cabin, geo)); // 1. static cabin
+    world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static aircraft + cabin
     const heatmap = new HeatmapRenderer(geo, app.renderer);
     world.addChild(heatmap.sprite); // 2. congestion overlay
     const agents = new AgentRenderer(geo, app.renderer);
