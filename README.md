@@ -6,6 +6,8 @@ Pyramid, and the mathematically optimal **Steffen Method**). It models passenger
 kinematics, aisle interference, luggage-stowage bottlenecks, and seat-interference
 (over-climb) penalties — entirely in the browser, with zero network latency per tick.
 
+THIS IS ALL FOR FUN! I will upload the math I have done later
+
 > **Status: Phase 1 — Core Architecture & Data Models.**
 > The structural foundation, simulation data models, the `O(N log N)` discrete-event
 > engine (priority queue + clock + lifecycle), the seedable RNG, distribution samplers,
