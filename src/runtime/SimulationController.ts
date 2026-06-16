@@ -40,6 +40,7 @@ export class SimulationController {
   private readonly frameListeners = new Set<FrameListener>();
   private coarseSink: CoarseSink | null = null;
   private readonly seed: number;
+  private currentStrategy: StrategyId = 'steffen-perfect';
 
   constructor(config: SimulationConfig) {
     this.engine = new SimulationEngine(config);
@@ -64,6 +65,7 @@ export class SimulationController {
    */
   loadStrategy(strategyId: StrategyId): void {
     this.pause();
+    this.currentStrategy = strategyId;
     const strategy = getStrategy(strategyId);
     const cabin = this.engine.cabin;
     const order = strategy
@@ -72,6 +74,15 @@ export class SimulationController {
     this.engine.initialize(order);
     this.pushCoarse();
     this.emitFrame();
+  }
+
+  /**
+   * Switch between Simple (deterministic) and Realism (stochastic) attribute
+   * generation, then reload the current strategy so the change takes effect.
+   */
+  setSimpleMode(enabled: boolean): void {
+    this.engine.setDeterministic(enabled);
+    this.loadStrategy(this.currentStrategy);
   }
 
   /** Start (or resume) rAF-driven playback. No-op if already running/complete. */

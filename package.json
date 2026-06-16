@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "verify:phase2": "tsx scripts/phase2-harness.ts"
+    "verify:phase2": "tsx scripts/phase2-harness.ts",
+    "verify:phase4": "tsx scripts/phase4-harness.ts"
   },
   "dependencies": {
     "next": "^15.1.6",

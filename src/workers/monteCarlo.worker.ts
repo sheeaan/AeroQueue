@@ -1,33 +1,37 @@
 /**
- * Headless Monte-Carlo shard runner (Web Worker).
+ * Headless Monte-Carlo Web Worker.
  *
- * Rationale: a single visualised run is statistically meaningless because
- * stowage times and walking speeds are random. To converge on the true expected
- * boarding time `E` (Law of Large Numbers) the platform runs `M ∈ {10, 100,
- * 1000, 10000}` headless simulations. Doing that on the main thread would freeze
- * the UI, so the work is offloaded here and only progress/results are posted
- * back.
+ * A single visualised run is statistically meaningless (stow times, walking
+ * speeds, and — for some strategies — the boarding order are random). To
+ * converge on the true expected boarding time `E` (Law of Large Numbers) the
+ * platform runs many headless simulations. Doing that on the main thread would
+ * freeze the UI, so it happens here and only progress/results are posted back.
  *
- * The heavy lifting lives in the *pure* {@link executeMonteCarlo} function so it
- * can be unit-tested without a Worker context; the message glue at the bottom
- * only activates inside an actual worker.
+ * Instantiate from the main thread (Next.js-compatible) with:
+ *   new Worker(new URL('../workers/monteCarlo.worker.ts', import.meta.url), { type: 'module' })
+ *
+ * The heavy lifting lives in the pure {@link runMonteCarlo} function so it can be
+ * unit-tested in Node; the message glue at the bottom only activates inside a
+ * real worker scope.
  */
 import { summarize } from '@/simulation/analysis/statistics';
 import type { MonteCarloResult } from '@/simulation/analysis/statistics';
+import { DEFAULT_SIMULATION_CONFIG } from '@/simulation/config/simulation';
 import type { SimulationConfig } from '@/simulation/config/simulation';
-import type { SeatId } from '@/simulation/domain/ids';
 import { SimulationEngine } from '@/simulation/engine/SimulationEngine';
+import { Random } from '@/simulation/rng/Random';
+import { getStrategy, registerDefaultStrategies } from '@/simulation/strategies';
+import type { StrategyId } from '@/simulation/strategies/BoardingStrategy';
 
 // ── Message protocol ────────────────────────────────────────────────────────
 export interface MonteCarloRequest {
-  type: 'run';
-  config: SimulationConfig;
-  /** Boarding order (chromosome) to evaluate. */
-  order: SeatId[];
+  strategyId: StrategyId;
   /** Number of independent simulations `M`. */
-  runs: number;
-  /** Base seed; run `i` uses `baseSeed + i` for reproducible independence. */
-  baseSeed: number;
+  iterations: number;
+  /** Deterministic Simple Mode vs stochastic Realism Mode. */
+  isSimpleMode: boolean;
+  /** Optional base seed for reproducibility. */
+  baseSeed?: number;
 }
 
 export interface MonteCarloProgress {
@@ -36,48 +40,72 @@ export interface MonteCarloProgress {
   total: number;
 }
 
-export interface MonteCarloComplete {
-  type: 'complete';
+export interface MonteCarloDone {
+  type: 'done';
   result: MonteCarloResult;
+  strategyId: StrategyId;
+  isSimpleMode: boolean;
 }
 
-export type MonteCarloOutbound = MonteCarloProgress | MonteCarloComplete;
+export type MonteCarloResponse = MonteCarloProgress | MonteCarloDone;
+
+/** Seed offset that decorrelates the order stream from the attribute stream. */
+const ATTRIBUTE_SEED_OFFSET = 1_000_003;
 
 /**
- * Run `request.runs` independent headless simulations and aggregate their final
- * boarding times. Pure and synchronous — the caller decides how to surface
- * progress (the worker glue posts it; a test can collect it).
+ * Run `request.iterations` independent simulations and aggregate the boarding
+ * times into `{ mean (μ), variance (σ²), … }`. Each iteration draws a fresh
+ * boarding order *and* fresh passenger attributes (in Realism Mode), so the
+ * resulting variance captures the strategy's full real-world spread.
  */
-export function executeMonteCarlo(
+export function runMonteCarlo(
   request: MonteCarloRequest,
   onProgress?: (completed: number, total: number) => void,
 ): MonteCarloResult {
-  const samples: number[] = [];
-  for (let i = 0; i < request.runs; i++) {
-    const engine = new SimulationEngine({ ...request.config, seed: request.baseSeed + i });
-    engine.initialize(request.order);
-    samples.push(engine.run().boardingTime);
-    onProgress?.(i + 1, request.runs);
+  registerDefaultStrategies();
+  const strategy = getStrategy(request.strategyId);
+  const cabin = DEFAULT_SIMULATION_CONFIG.cabin;
+  const baseSeed = request.baseSeed ?? 0xc0ffee;
+  const total = Math.max(0, Math.floor(request.iterations));
+  const reportEvery = Math.max(1, Math.floor(total / 100));
+
+  const samples: number[] = new Array(total);
+  for (let i = 0; i < total; i++) {
+    const order = strategy
+      ? strategy.generateOrder(cabin, new Random(baseSeed + i))
+      : cabin.seats.map((seat) => seat.id);
+
+    const config: SimulationConfig = {
+      ...DEFAULT_SIMULATION_CONFIG,
+      seed: baseSeed + ATTRIBUTE_SEED_OFFSET + i,
+      simpleMode: request.isSimpleMode,
+    };
+
+    const engine = new SimulationEngine(config);
+    engine.initialize(order);
+    samples[i] = engine.run().boardingTime;
+
+    if (onProgress && (i % reportEvery === 0 || i === total - 1)) onProgress(i + 1, total);
   }
+
   return summarize(samples);
 }
 
-// ── Worker glue (only runs inside a DedicatedWorkerGlobalScope) ───────────────
-// Guarded so importing this module on the main thread (e.g. for the pure
-// function or its types) has no side effects. `importScripts` exists only in
-// worker scopes, which makes it a reliable discriminator.
-const workerScope = globalThis as unknown as {
-  importScripts?: unknown;
-  postMessage?: (message: unknown) => void;
-  onmessage?: ((event: MessageEvent<MonteCarloRequest>) => void) | null;
-};
-
-if (typeof workerScope.importScripts === 'function' && typeof workerScope.postMessage === 'function') {
-  const post = (message: MonteCarloOutbound): void => workerScope.postMessage!(message);
-  workerScope.onmessage = (event: MessageEvent<MonteCarloRequest>) => {
-    const result = executeMonteCarlo(event.data, (completed, total) =>
-      post({ type: 'progress', completed, total }),
+// ── Worker glue (only activates inside a DedicatedWorkerGlobalScope) ──────────
+// Guarded with `typeof self` so importing this module in Node (for the pure
+// function or its types) has no side effects.
+if (typeof self !== 'undefined' && typeof (self as unknown as Worker).postMessage === 'function') {
+  const ctx = self as unknown as Worker;
+  ctx.onmessage = (event: MessageEvent<MonteCarloRequest>) => {
+    const request = event.data;
+    const result = runMonteCarlo(request, (completed, total) =>
+      ctx.postMessage({ type: 'progress', completed, total } satisfies MonteCarloProgress),
     );
-    post({ type: 'complete', result });
+    ctx.postMessage({
+      type: 'done',
+      result,
+      strategyId: request.strategyId,
+      isSimpleMode: request.isSimpleMode,
+    } satisfies MonteCarloDone);
   };
 }

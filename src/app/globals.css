@@ -26,7 +26,7 @@ body {
 }
 
 .shell {
-  max-width: 920px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 48px 24px 64px;
 }
@@ -167,24 +167,62 @@ code {
   font-size: 14px;
 }
 
-.stage-overlay {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  pointer-events: none;
+/* ── Lab layout: canvas + sidebar ────────────────────────────────────── */
+.lab {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 18px;
+  align-items: start;
+}
+
+.lab-canvas {
+  min-width: 0; /* allow the canvas column to shrink instead of overflowing */
+}
+
+.lab-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .lab {
+    grid-template-columns: 1fr;
+  }
 }
 
 .control-panel {
-  pointer-events: auto;
-  width: 226px;
-  background: rgba(15, 23, 42, 0.82);
-  backdrop-filter: blur(6px);
+  width: 100%;
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Segmented Realism / Simple mode toggle. */
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: #0e1626;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.mode-toggle button {
+  flex: 1;
+  background: transparent;
+  color: var(--muted);
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.mode-toggle button.mode-active {
+  background: var(--accent-strong);
+  color: #fff;
 }
 
 .control-row {
@@ -263,4 +301,118 @@ code {
 
 .dot-aisle {
   background: var(--aisle);
+}
+
+/* ── Monte-Carlo analytics dashboard ─────────────────────────────────── */
+.analytics {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.analytics-title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.analytics-sub {
+  margin: -8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.run-button {
+  width: 100%;
+  padding: 10px;
+}
+
+.run-button:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.progress {
+  height: 8px;
+  border-radius: 5px;
+  background: #0e1626;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.12s linear;
+}
+
+.analytics-result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.analytics-for {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stale-tag {
+  font-size: 11px;
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 5px;
+  padding: 0 5px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat {
+  background: #0e1626;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 800;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-unit {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }

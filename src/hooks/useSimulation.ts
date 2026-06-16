@@ -15,6 +15,8 @@ export interface SimulationControls {
   setSpeed: (multiplier: number) => void;
   /** Switch boarding strategy and reload the manifest. */
   selectStrategy: (id: StrategyId) => void;
+  /** Toggle deterministic Simple Mode vs stochastic Realism Mode. */
+  setSimpleMode: (enabled: boolean) => void;
   strategyId: StrategyId;
 }
 
@@ -27,6 +29,7 @@ export function useSimulation(): SimulationControls {
   const controller = useSimulationContext();
   const strategyId = useSimulationStore((state) => state.strategyId);
   const setStoreStrategy = useSimulationStore((state) => state.setStrategy);
+  const setStoreSimpleMode = useSimulationStore((state) => state.setSimpleMode);
   const initialised = useRef(false);
 
   useEffect(() => {
@@ -46,8 +49,15 @@ export function useSimulation(): SimulationControls {
     },
     [controller, setStoreStrategy],
   );
+  const setSimpleMode = useCallback(
+    (enabled: boolean) => {
+      setStoreSimpleMode(enabled);
+      controller.setSimpleMode(enabled);
+    },
+    [controller, setStoreSimpleMode],
+  );
 
-  return { play, pause, reset, setSpeed, selectStrategy, strategyId };
+  return { play, pause, reset, setSpeed, selectStrategy, setSimpleMode, strategyId };
 }
 
 /**

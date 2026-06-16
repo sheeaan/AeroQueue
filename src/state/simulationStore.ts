@@ -30,6 +30,8 @@ export interface SimulationUiState extends SimulationCoarse {
   strategyId: StrategyId;
   /** Whether the congestion heatmap overlay is shown. */
   showHeatmap: boolean;
+  /** Simple (deterministic) mode vs Realism (stochastic) mode. */
+  isSimpleMode: boolean;
   /** Latest Monte-Carlo summary, or `null` before any batch has run. */
   monteCarlo: MonteCarloResult | null;
 
@@ -38,6 +40,7 @@ export interface SimulationUiState extends SimulationCoarse {
   setStrategy: (id: StrategyId) => void;
   setHeatmap: (visible: boolean) => void;
   toggleHeatmap: () => void;
+  setSimpleMode: (enabled: boolean) => void;
   setMonteCarlo: (result: MonteCarloResult | null) => void;
   resetUi: () => void;
 }
@@ -60,12 +63,14 @@ export const useSimulationStore = create<SimulationUiState>((set) => ({
   ...INITIAL_COARSE,
   strategyId: 'steffen-perfect',
   showHeatmap: true,
+  isSimpleMode: false,
   monteCarlo: null,
 
   setCoarse: (patch) => set(patch),
   setStrategy: (strategyId) => set({ strategyId }),
   setHeatmap: (showHeatmap) => set({ showHeatmap }),
   toggleHeatmap: () => set((state) => ({ showHeatmap: !state.showHeatmap })),
+  setSimpleMode: (isSimpleMode) => set({ isSimpleMode }),
   setMonteCarlo: (monteCarlo) => set({ monteCarlo }),
   resetUi: () => set({ ...INITIAL_COARSE }),
 }));

@@ -17,13 +17,14 @@ const SEAT_LEGEND: ReadonlyArray<{ label: string; className: string }> = [
  * none of them participate in the 60 FPS render loop.
  */
 export function ControlPanel() {
-  const { play, pause, reset, selectStrategy, strategyId } = useSimulation();
+  const { play, pause, reset, selectStrategy, setSimpleMode, strategyId } = useSimulation();
   const status = useSimulationStore((s) => s.status);
   const time = useSimulationStore((s) => s.time);
   const seatedCount = useSimulationStore((s) => s.seatedCount);
   const totalPassengers = useSimulationStore((s) => s.totalPassengers);
   const showHeatmap = useSimulationStore((s) => s.showHeatmap);
   const toggleHeatmap = useSimulationStore((s) => s.toggleHeatmap);
+  const isSimpleMode = useSimulationStore((s) => s.isSimpleMode);
 
   return (
     <div className="control-panel">
@@ -39,6 +40,21 @@ export function ControlPanel() {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="mode-toggle" role="group" aria-label="Simulation mode">
+        <button
+          className={isSimpleMode ? '' : 'mode-active'}
+          onClick={() => setSimpleMode(false)}
+        >
+          Realism
+        </button>
+        <button
+          className={isSimpleMode ? 'mode-active' : ''}
+          onClick={() => setSimpleMode(true)}
+        >
+          Simple
+        </button>
       </div>
 
       <div className="control-row">

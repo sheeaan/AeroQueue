@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { ControlPanel } from '@/components/ControlPanel';
 import { SimulationProvider } from '@/components/SimulationProvider';
 
@@ -18,15 +19,24 @@ const SimulationCanvas = dynamic(
   },
 );
 
-/** Composes the provider, the WebGL canvas, and the overlaid control panel. */
+/**
+ * Two-column lab layout: the WebGL cabin on the left (always fully visible, no
+ * overlays), and a dedicated sidebar on the right holding the controls and the
+ * Monte-Carlo analytics. Collapses to a single column on narrow viewports.
+ */
 export function SimulationView() {
   return (
     <SimulationProvider>
-      <div className="stage">
-        <SimulationCanvas />
-        <div className="stage-overlay">
-          <ControlPanel />
+      <div className="lab">
+        <div className="lab-canvas">
+          <div className="stage">
+            <SimulationCanvas />
+          </div>
         </div>
+        <aside className="lab-sidebar">
+          <ControlPanel />
+          <AnalyticsDashboard />
+        </aside>
       </div>
     </SimulationProvider>
   );

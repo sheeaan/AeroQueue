@@ -100,6 +100,8 @@ export class SimulationEngine {
   private readonly stowStartedAt = new Map<PassengerId, number>(); // for the stow-progress arc
 
   private rng: Random;
+  /** When true, attribute generation bypasses the stochastic distributions. */
+  private deterministic: boolean;
   private clock = 0;
   private processed = 0;
   private seated = 0;
@@ -111,6 +113,7 @@ export class SimulationEngine {
     this.grid = new CabinGrid(config.cabin);
     this.aisleCol = config.cabin.aisleColIndex;
     this.rng = new Random(config.seed);
+    this.deterministic = config.simpleMode;
     this.aisleHeat = new Array<number>(config.cabin.rows).fill(0);
     this.seatById = new Map(config.cabin.seats.map((seat) => [seat.id, seat]));
     this.innerSeats = this.buildInnerSeats(config.cabin);
@@ -134,6 +137,14 @@ export class SimulationEngine {
   }
   get eventsProcessed(): number {
     return this.processed;
+  }
+  get isDeterministic(): boolean {
+    return this.deterministic;
+  }
+
+  /** Toggle Simple (deterministic) vs Realism (stochastic) attribute generation. */
+  setDeterministic(value: boolean): void {
+    this.deterministic = value;
   }
 
   // ── Lifecycle observation (push channel) ────────────────────────────────────
@@ -161,9 +172,20 @@ export class SimulationEngine {
       const seat = this.seatById.get(seatId);
       invariant(seat, `Boarding order references unknown seat "${seatId}"`);
 
-      const bagCount = sampleBagCount(this.rng, this.config.bagCountWeights);
-      const stowTime = sampleStowTime(this.rng, bagCount, this.config.stowage);
-      const walkingSpeed = sampleWalkingSpeed(this.rng, this.config.walking);
+      // Simple Mode: deterministic "textbook" attributes (no RNG). Realism Mode:
+      // sample from the configured probability distributions.
+      let bagCount: number;
+      let stowTime: number;
+      let walkingSpeed: number;
+      if (this.deterministic) {
+        bagCount = this.config.simple.bagCount;
+        stowTime = bagCount * this.config.simple.ticksPerBag;
+        walkingSpeed = this.config.simple.walkingSpeed;
+      } else {
+        bagCount = sampleBagCount(this.rng, this.config.bagCountWeights);
+        stowTime = sampleStowTime(this.rng, bagCount, this.config.stowage);
+        walkingSpeed = sampleWalkingSpeed(this.rng, this.config.walking);
+      }
       const id = PassengerId(queueIndex);
 
       this.passengers.set(id, {

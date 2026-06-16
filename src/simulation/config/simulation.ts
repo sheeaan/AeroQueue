@@ -37,6 +37,20 @@ export interface FamilyGroupParams {
 }
 
 /**
+ * Deterministic "textbook" attribute values used when {@link SimulationConfig.simpleMode}
+ * is on. No RNG is consulted, so every passenger is identical and a run depends
+ * only on the boarding order — isolating algorithmic structure from human noise.
+ */
+export interface SimpleModeParams {
+  /** Constant walking velocity `v_k` (cells/tick) for every passenger. */
+  walkingSpeed: number;
+  /** Constant carry-on count `B_k` for every passenger. */
+  bagCount: number;
+  /** Stow ticks contributed per bag, so `t_stow = bagCount · ticksPerBag`. */
+  ticksPerBag: number;
+}
+
+/**
  * The complete, serialisable configuration for a single simulation. It is a
  * plain data object (no class instances beyond the immutable cabin) precisely
  * so it can be `postMessage`d into a Web Worker without loss.
@@ -56,6 +70,9 @@ export interface SimulationConfig {
   walking: WalkingParams;
   seatShuffle: SeatShuffleParams;
   familyGroups: FamilyGroupParams;
+  /** When true, attributes are deterministic (see {@link SimpleModeParams}). */
+  simpleMode: boolean;
+  simple: SimpleModeParams;
 }
 
 /** Sensible defaults calibrated to a narrow-body single-class flight. */
@@ -69,4 +86,6 @@ export const DEFAULT_SIMULATION_CONFIG: SimulationConfig = {
   walking: { meanCellsPerTick: 0.5, stdDev: 0.12, min: 0.15 },
   seatShuffle: { clearTicks: 4, sitTicks: 3 },
   familyGroups: { enabled: false, meanSize: 3, fraction: 0.3 },
+  simpleMode: false,
+  simple: { walkingSpeed: 0.5, bagCount: 1, ticksPerBag: 20 },
 };
