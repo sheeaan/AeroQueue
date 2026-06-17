@@ -24,9 +24,10 @@ export const COLOR_HULL_FILL = 0x141e36;
 export const COLOR_HULL_STROKE = 0x3f5680;
 export const COLOR_WING_FILL = 0x101a30;
 export const COLOR_WING_STROKE = 0x35496f;
-export const COLOR_JETBRIDGE_FILL = 0x1b2640;
-export const COLOR_JETBRIDGE_STROKE = 0x3f5680;
+export const COLOR_JETBRIDGE_FILL = 0x223251;
+export const COLOR_JETBRIDGE_STROKE = 0x4a6699;
 export const COLOR_DOOR = 0x9fd2ff;
+export const COLOR_SEAT_FILL = 0x18243f;
 
 /** Component-wise linear interpolation between two packed RGB colours. */
 export function lerpColor(a: number, b: number, t: number): number {
