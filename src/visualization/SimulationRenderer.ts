@@ -55,8 +55,11 @@ export class SimulationRenderer {
     });
 
     const canvas = app.canvas as HTMLCanvasElement;
+    // Fill the (bounded) host box and scale the drawing to fit while preserving
+    // aspect ratio, so the whole aircraft is visible at 100% browser zoom.
     canvas.style.width = '100%';
-    canvas.style.height = 'auto';
+    canvas.style.height = '100%';
+    canvas.style.objectFit = 'contain';
     canvas.style.display = 'block';
     host.appendChild(canvas);
 
@@ -71,7 +74,7 @@ export class SimulationRenderer {
     world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static aircraft + cabin
     const heatmap = new HeatmapRenderer(geo, app.renderer);
     world.addChild(heatmap.sprite); // 2. congestion overlay
-    const agents = new AgentRenderer(geo, app.renderer);
+    const agents = new AgentRenderer(geo, anatomy, app.renderer);
     world.addChild(agents.layer); // 3. agents on top
 
     return new SimulationRenderer(app, world, agents, heatmap);
