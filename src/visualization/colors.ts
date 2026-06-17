@@ -15,19 +15,21 @@ export const SEAT_COLORS: Record<SeatColumnType, number> = {
 export const COLOR_BLOCKED_FLASH = 0xffffff;
 
 export const COLOR_CABIN_BG = 0x0b1120;
-export const COLOR_FUSELAGE = 0x16203a;
-export const COLOR_SEAT_OUTLINE = 0x2a3a57;
-export const COLOR_AISLE_BAND = 0x0a101f;
 
-// ── Blueprint aircraft anatomy (Phase 6) ──────────────────────────────
-export const COLOR_HULL_FILL = 0x141e36;
-export const COLOR_HULL_STROKE = 0x3f5680;
-export const COLOR_WING_FILL = 0x101a30;
-export const COLOR_WING_STROKE = 0x35496f;
-export const COLOR_JETBRIDGE_FILL = 0x223251;
-export const COLOR_JETBRIDGE_STROKE = 0x4a6699;
+// ── Aircraft anatomy (seat-map blueprint) ─────────────────────────────
+export const COLOR_HULL_FILL = 0x26344f; // visible slate fuselage
+export const COLOR_HULL_STROKE = 0x6a86b8; // bright blueprint outline
+export const COLOR_WING_FILL = 0x1e2942;
+export const COLOR_WING_STROKE = 0x4f6a9c;
+export const COLOR_JETBRIDGE_FILL = 0x2c3a57;
+export const COLOR_JETBRIDGE_STROKE = 0x5a76a8;
 export const COLOR_DOOR = 0x9fd2ff;
-export const COLOR_SEAT_FILL = 0x18243f;
+export const COLOR_SEAT_FILL = 0x223a5e;
+export const COLOR_SEAT_OUTLINE = 0x4f74ab; // light blue seat blocks
+export const COLOR_FIXTURE = 0x37456a; // galley / lavatory blocks
+export const COLOR_AISLE_LINE = 0x4a5f8a;
+export const COLOR_EXIT = 0x49c46a;
+export const COLOR_COCKPIT = 0x9fd2ff;
 
 /** Component-wise linear interpolation between two packed RGB colours. */
 export function lerpColor(a: number, b: number, t: number): number {

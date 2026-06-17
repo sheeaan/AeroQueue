@@ -32,14 +32,20 @@ export class SimulationRenderer {
   static async create(host: HTMLElement, cabin: CabinLayout): Promise<SimulationRenderer> {
     const geo = createGeometry(cabin);
     const anatomy = computeAnatomy(geo);
-    const { frame } = anatomy;
+    const { bbox } = anatomy;
+    const PAD = 14;
+
+    // The aircraft is laid out horizontally in logical coordinates then rotated
+    // +90° for display, so the long axis (rows) runs vertically and the cabin
+    // reads as a real top-down seat map (nose up, tail down). The canvas is the
+    // rotated content bounding box.
+    const width = bbox.maxY - bbox.minY + PAD * 2;
+    const height = bbox.maxX - bbox.minX + PAD * 2;
 
     const app = new Application();
     await app.init({
-      // Canvas is enlarged by the aircraft frame so the nose, tail, wings and jet
-      // bridge are never clipped.
-      width: geo.width + frame.left + frame.right,
-      height: geo.height + frame.top + frame.bottom,
+      width,
+      height,
       background: COLOR_CABIN_BG,
       backgroundAlpha: 1,
       antialias: true,
@@ -54,11 +60,12 @@ export class SimulationRenderer {
     canvas.style.display = 'block';
     host.appendChild(canvas);
 
-    // Offset the whole world by the frame so the seat grid (which still uses raw
-    // geo coordinates) sits perfectly aligned inside the fuselage. Agents and the
-    // heatmap are children of `world`, so their coordinate mapping is preserved.
+    // Rotate the whole world (cabin + agents + heatmap together) so the seat/aisle
+    // coordinate mapping is preserved exactly — only the presentation rotates.
+    // screen = (-localY, localX) + position; position places the content bbox.
     const world = new Container();
-    world.position.set(frame.left, frame.top);
+    world.rotation = Math.PI / 2;
+    world.position.set(PAD + bbox.maxY, PAD - bbox.minX);
     app.stage.addChild(world);
 
     world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static aircraft + cabin
