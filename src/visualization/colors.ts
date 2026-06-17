@@ -19,8 +19,8 @@ export const COLOR_CABIN_BG = 0x0b1120;
 // ── Aircraft anatomy (seat-map blueprint) ─────────────────────────────
 export const COLOR_HULL_FILL = 0x26344f; // visible slate fuselage
 export const COLOR_HULL_STROKE = 0x6a86b8; // bright blueprint outline
-export const COLOR_WING_FILL = 0x1e2942;
-export const COLOR_WING_STROKE = 0x4f6a9c;
+export const COLOR_WING_FILL = 0x39455f; // muted grey wing shading
+export const COLOR_WING_STROKE = 0x52668c;
 export const COLOR_JETBRIDGE_FILL = 0x2c3a57;
 export const COLOR_JETBRIDGE_STROKE = 0x5a76a8;
 export const COLOR_DOOR = 0x9fd2ff;

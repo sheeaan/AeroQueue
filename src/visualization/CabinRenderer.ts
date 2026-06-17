@@ -2,7 +2,6 @@ import { Container, Graphics } from 'pixi.js';
 import type { CabinLayout } from '@/simulation/domain/Grid';
 import {
   COLOR_AISLE_LINE,
-  COLOR_COCKPIT,
   COLOR_DOOR,
   COLOR_EXIT,
   COLOR_FIXTURE,
@@ -19,27 +18,22 @@ import type { CanvasGeometry } from './geometry';
 
 // ── Anatomy proportions (px) ──────────────────────────────────────────────────
 // Horizontal layout: nose at -X (left), tail at +X (right), aisle along the
-// centre. Tuned for an A320-like seat-map silhouette.
-const NOSE_LEN = 56; // short, blunt nose cone (A320-like)
-const TAIL_LEN = 86; // moderate, blunt tapered tail cone (not a rocket point)
-const TAIL_TIP_RATIO = 0.3; // tail-cone end half-height as a fraction of body half-height
-const BODY_PAD_Y = 6; // fuselage half-height beyond the outermost seats (tight)
-const BODY_PAD_FRONT = 34; // cabin space ahead of row 0 (cockpit door / fwd galley)
-const BODY_PAD_REAR = 28; // cabin space behind the last row (aft galley / lav)
+// centre. Tuned to a long, thin A320 seat-map silhouette (BA reference).
+const NOSE_LEN = 62; // smooth blunt nose
+const TAIL_LEN = 112; // long gradual tapered tail cone (no fins)
+const TAIL_TIP_RATIO = 0.18; // tail-cone end half-height as a fraction of body half-height
+const BODY_PAD_Y = 6; // fuselage half-height beyond the outermost seats (hugs the seats)
+const BODY_PAD_FRONT = 38; // forward galley / door vestibule
+const BODY_PAD_REAR = 34; // aft galley / lav
 
-const WING_SPAN = 74; // wing reach beyond the fuselage edge
-const WING_ROOT_ROW = 14; // wing root anchored mid-fuselage
-const WING_ROOT_CHORD = 120;
-const WING_SWEEP = 68;
-const WING_TIP_CHORD = 32;
-const STAB_SPAN = 34; // horizontal stabilizer reach
-const STAB_AT = 0.18; // position along the tail cone (0 = base, 1 = tip)
-const STAB_CHORD = 46;
-const STAB_SWEEP = 26;
+// Subtle overwing shading (not big swept triangles).
+const WING_SPAN = 56; // wing reach beyond the fuselage edge
+const WING_ROOT_ROW = 9; // wing root begins near this row
+const WING_ROOT_CHORD = 186; // broad root spanning the over-wing rows
+const WING_SWEEP = 40;
+const WING_TIP_CHORD = 100; // wide tip → soft trapezoid, not a triangle
 
-const JET_GATE_RISE = 64; // jet-bridge gate offset from the fuselage side
-const GATE_W = 38;
-const GATE_H = 24;
+const JET_GATE_RISE = 54; // jet-bridge gate offset from the fuselage side
 
 /** Jet-bridge waypoints (logical coords) shared with the agent entry animation. */
 export interface JetBridgePath {
@@ -53,8 +47,7 @@ export interface JetBridgePath {
 
 /**
  * Derived geometry of the aircraft and the content bounding box (logical coords).
- * Pure and shared by the renderer (canvas sizing + rotation), the draw routines,
- * and the agent renderer (jet-bridge entry path).
+ * Pure and shared by the renderer, the draw routines, and the agent renderer.
  */
 export interface CabinAnatomy {
   cY: number;
@@ -87,18 +80,21 @@ export function computeAnatomy(geo: CanvasGeometry): CabinAnatomy {
   const tailTipX = bodyRightX + TAIL_LEN;
   const tailTipHalf = bodyHalf * TAIL_TIP_RATIO;
 
+  // Door sits in the forward vestibule AHEAD of row 0, so boarding passengers
+  // reach the aisle through the galley — never crossing the first-row seats.
+  const frontX = gridLeftX - 4;
   const entry: JetBridgePath = {
-    gateX: gridLeftX - 4,
-    gateY: bodyBottom + JET_GATE_RISE,
-    doorX: geo.rowToX(0),
+    doorX: frontX,
     doorY: bodyBottom,
-    aisleX: geo.rowToX(0),
+    aisleX: frontX,
     aisleY: cY,
+    gateX: frontX - 24,
+    gateY: bodyBottom + JET_GATE_RISE,
   };
 
   const wingTop = bodyTop - WING_SPAN;
   const wingBottom = bodyBottom + WING_SPAN;
-  const gateOuter = entry.gateY + GATE_H / 2;
+  const gateOuter = entry.gateY + 12;
 
   const bbox = {
     minX: noseTipX,
@@ -126,7 +122,7 @@ export function computeAnatomy(geo: CanvasGeometry): CabinAnatomy {
 
 /**
  * Builds the static background, drawn once (zero per-frame cost): jet bridge →
- * wings/tailplane → bezier hull → fixtures, aisle, seats, cockpit, doors.
+ * subtle wings → bezier hull → galley fixtures, aisle, seats, door/exits.
  */
 export function createCabinLayer(
   cabin: CabinLayout,
@@ -139,10 +135,9 @@ export function createCabinLayer(
   drawJetBridge(jetBridge, anatomy);
   layer.addChild(jetBridge);
 
-  const lifting = new Graphics();
-  drawWings(lifting, geo, anatomy);
-  drawStabilizers(lifting, anatomy);
-  layer.addChild(lifting);
+  const wings = new Graphics();
+  drawWings(wings, geo, anatomy);
+  layer.addChild(wings);
 
   const hull = new Graphics();
   drawHull(hull, anatomy);
@@ -161,51 +156,39 @@ export function createCabinLayer(
   layer.addChild(seats);
 
   const detail = new Graphics();
-  drawCockpit(detail, anatomy);
   drawDoorsAndExits(detail, geo, anatomy);
   layer.addChild(detail);
 
   return layer;
 }
 
-/** Half-height of the tapering tail cone at a given x (smoothstep taper). */
-function tailHalfAt(a: CabinAnatomy, x: number): number {
-  if (x <= a.bodyRightX) return a.bodyHalf;
-  const t = Math.min(1, (x - a.bodyRightX) / (a.tailTipX - a.bodyRightX));
-  const e = t * t * (3 - 2 * t);
-  return a.bodyHalf + (a.tailTipHalf - a.bodyHalf) * e;
-}
-
 /**
  * Aerodynamic fuselage: a smooth blunt nose (half-ellipse, vertical tangent at
- * the tip), a parallel-sided cabin, and a tapered tail cone. Shoulder-adjacent
- * control points share the shoulder Y for tangent-smooth, corner-free joins.
+ * the tip), a parallel-sided cabin, and a long gradual tail cone — no fins.
  */
 function drawHull(g: Graphics, a: CabinAnatomy): void {
   const tailLen = a.tailTipX - a.bodyRightX;
 
   g.moveTo(a.bodyLeftX, a.bodyTop);
   g.lineTo(a.bodyRightX, a.bodyTop);
-  // tail upper taper → tail-cone tip
   g.bezierCurveTo(
-    a.bodyRightX + tailLen * 0.5,
+    a.bodyRightX + tailLen * 0.55,
     a.bodyTop,
-    a.tailTipX - tailLen * 0.1,
+    a.tailTipX - tailLen * 0.12,
     a.cY - a.tailTipHalf,
     a.tailTipX,
     a.cY - a.tailTipHalf,
   );
-  g.quadraticCurveTo(a.tailTipX + 7, a.cY, a.tailTipX, a.cY + a.tailTipHalf);
+  g.quadraticCurveTo(a.tailTipX + 6, a.cY, a.tailTipX, a.cY + a.tailTipHalf);
   g.bezierCurveTo(
-    a.tailTipX - tailLen * 0.1,
+    a.tailTipX - tailLen * 0.12,
     a.cY + a.tailTipHalf,
-    a.bodyRightX + tailLen * 0.5,
+    a.bodyRightX + tailLen * 0.55,
     a.bodyBottom,
     a.bodyRightX,
     a.bodyBottom,
   );
   g.lineTo(a.bodyLeftX, a.bodyBottom);
-  // blunt nose: smooth half-ellipse (vertical tangent at the tip)
   g.quadraticCurveTo(a.noseTipX, a.bodyBottom, a.noseTipX, a.cY);
   g.quadraticCurveTo(a.noseTipX, a.bodyTop, a.bodyLeftX, a.bodyTop);
   g.closePath();
@@ -214,50 +197,27 @@ function drawHull(g: Graphics, a: CabinAnatomy): void {
   g.stroke({ width: 2, color: COLOR_HULL_STROKE, alpha: 0.95, alignment: 0.5 });
 }
 
-/** A swept, tapered lifting surface (wide root → narrow swept-back tip). */
-function sweptSurface(
-  g: Graphics,
-  rootLE: number,
-  rootChord: number,
-  sweep: number,
-  tipChord: number,
-  rootY: number,
-  tipY: number,
-  strokeWidth: number,
-): void {
-  const rootTE = rootLE + rootChord;
-  const tipLE = rootLE + sweep;
-  const tipTE = tipLE + tipChord;
-  g.poly([rootLE, rootY, rootTE, rootY, tipTE, tipY, tipLE, tipY]);
-  g.fill({ color: COLOR_WING_FILL, alpha: 0.6 });
-  g.stroke({ width: strokeWidth, color: COLOR_WING_STROKE, alpha: 0.9 });
-}
-
-/** Swept main wings, mirrored above and below the mid-fuselage. */
+/** Subtle over-wing shading: a broad, softly-swept trapezoid each side. */
 function drawWings(g: Graphics, geo: CanvasGeometry, a: CabinAnatomy): void {
   const rootLE = geo.rowToX(WING_ROOT_ROW);
-  sweptSurface(g, rootLE, WING_ROOT_CHORD, WING_SWEEP, WING_TIP_CHORD, a.bodyTop + 6, a.bodyTop - WING_SPAN, 1.4);
-  sweptSurface(g, rootLE, WING_ROOT_CHORD, WING_SWEEP, WING_TIP_CHORD, a.bodyBottom - 6, a.bodyBottom + WING_SPAN, 1.4);
-}
-
-/** Small swept horizontal stabilizers attached to the tapering tail cone. */
-function drawStabilizers(g: Graphics, a: CabinAnatomy): void {
-  const rootLE = a.bodyRightX + (a.tailTipX - a.bodyRightX) * STAB_AT;
-  const half = tailHalfAt(a, rootLE);
-  sweptSurface(g, rootLE, STAB_CHORD, STAB_SWEEP, STAB_CHORD * 0.5, a.cY - half + 2, a.cY - half - STAB_SPAN, 1.1);
-  sweptSurface(g, rootLE, STAB_CHORD, STAB_SWEEP, STAB_CHORD * 0.5, a.cY + half - 2, a.cY + half + STAB_SPAN, 1.1);
+  const rootTE = rootLE + WING_ROOT_CHORD;
+  const tipLE = rootLE + WING_SWEEP;
+  const tipTE = tipLE + WING_TIP_CHORD;
+  g.poly([rootLE, a.bodyTop + 4, rootTE, a.bodyTop + 4, tipTE, a.bodyTop - WING_SPAN, tipLE, a.bodyTop - WING_SPAN]);
+  g.poly([rootLE, a.bodyBottom - 4, rootTE, a.bodyBottom - 4, tipTE, a.bodyBottom + WING_SPAN, tipLE, a.bodyBottom + WING_SPAN]);
+  g.fill({ color: COLOR_WING_FILL, alpha: 0.45 });
+  g.stroke({ width: 1, color: COLOR_WING_STROKE, alpha: 0.5 });
 }
 
 /**
- * Jet bridge: a gate rotunda with a thick angled gangway connecting flush to the
- * Row 0 door. After the +90° rotation this reads as a gangway entering from the
- * top-left into the forward-left door.
+ * Jet bridge: a gate rotunda with a thick gangway connecting flush to the front
+ * boarding door (ahead of Row 0, on the lower fuselage side).
  */
 function drawJetBridge(g: Graphics, a: CabinAnatomy): void {
   const e = a.entry;
   const w = 15;
   const dx = e.doorX - e.gateX;
-  const dy = e.doorY - 5 - e.gateY; // tuck the end just inside the hull → flush
+  const dy = e.doorY - 5 - e.gateY;
   const len = Math.hypot(dx, dy) || 1;
   const nx = (-dy / len) * (w / 2);
   const ny = (dx / len) * (w / 2);
@@ -265,15 +225,15 @@ function drawJetBridge(g: Graphics, a: CabinAnatomy): void {
   g.fill({ color: COLOR_JETBRIDGE_FILL, alpha: 0.95 });
   g.stroke({ width: 1.4, color: COLOR_JETBRIDGE_STROKE, alpha: 0.95 });
 
-  g.roundRect(e.gateX - GATE_W / 2, e.gateY - GATE_H / 2, GATE_W, GATE_H, 6);
+  g.roundRect(e.gateX - 19, e.gateY - 11, 38, 22, 6);
   g.fill({ color: COLOR_JETBRIDGE_FILL, alpha: 0.95 });
   g.stroke({ width: 1.4, color: COLOR_JETBRIDGE_STROKE, alpha: 0.95 });
 }
 
 /** Galley / lavatory fixture blocks at the cabin ends (fore and aft). */
 function drawFixtures(g: Graphics, a: CabinAnatomy): void {
-  const half = a.bodyHalf - 10;
-  g.roundRect(a.bodyLeftX + 8, a.cY - half, a.gridLeftX - a.bodyLeftX - 14, half * 2, 5);
+  const half = a.bodyHalf - 9;
+  g.roundRect(a.bodyLeftX + 6, a.cY - half, a.gridLeftX - a.bodyLeftX - 12, half * 2, 5);
   g.roundRect(a.gridRightX + 6, a.cY - half, a.bodyRightX - a.gridRightX - 12, half * 2, 5);
   g.fill({ color: COLOR_FIXTURE, alpha: 0.5 });
   g.stroke({ width: 1, color: COLOR_HULL_STROKE, alpha: 0.4 });
@@ -299,27 +259,16 @@ function drawSeats(g: Graphics, cabin: CabinLayout, geo: CanvasGeometry): void {
   g.stroke({ width: 1.1, color: COLOR_SEAT_OUTLINE, alpha: 0.95 });
 }
 
-/** Cockpit windscreen: a few short chevron strokes near the nose. */
-function drawCockpit(g: Graphics, a: CabinAnatomy): void {
-  const x0 = a.bodyLeftX - 4;
-  for (let i = 0; i < 3; i++) {
-    const off = 9 + i * 7;
-    g.moveTo(x0 - i * 10, a.cY - off);
-    g.quadraticCurveTo(x0 - i * 10 - 13, a.cY, x0 - i * 10, a.cY + off);
-  }
-  g.stroke({ width: 1.1, color: COLOR_COCKPIT, alpha: 0.5 });
-}
-
 /** Forward boarding door plus green over-wing exit marks. */
 function drawDoorsAndExits(g: Graphics, geo: CanvasGeometry, a: CabinAnatomy): void {
-  g.rect(geo.rowToX(0) - 9, a.bodyBottom - 2, 18, 5);
-  g.fill({ color: COLOR_DOOR, alpha: 0.92 });
+  g.rect(a.entry.doorX - 9, a.bodyBottom - 2, 18, 5);
+  g.fill({ color: COLOR_DOOR, alpha: 0.9 });
 
-  const exitRows = [WING_ROOT_ROW, WING_ROOT_ROW + 4];
+  const exitRows = [WING_ROOT_ROW + 1, WING_ROOT_ROW + 5];
   for (const row of exitRows) {
     const x = geo.rowToX(row) - 7;
     g.rect(x, a.bodyTop - 1, 14, 4);
     g.rect(x, a.bodyBottom - 3, 14, 4);
   }
-  g.fill({ color: COLOR_EXIT, alpha: 0.85 });
+  g.fill({ color: COLOR_EXIT, alpha: 0.8 });
 }
