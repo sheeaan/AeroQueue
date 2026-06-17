@@ -35,12 +35,12 @@ export class SimulationRenderer {
     const { bbox } = anatomy;
     const PAD = 14;
 
-    // The aircraft is laid out horizontally in logical coordinates then rotated
-    // +90° for display, so the long axis (rows) runs vertically and the cabin
-    // reads as a real top-down seat map (nose up, tail down). The canvas is the
-    // rotated content bounding box.
-    const width = bbox.maxY - bbox.minY + PAD * 2;
-    const height = bbox.maxX - bbox.minX + PAD * 2;
+    // Horizontal layout (nose left, tail right). The internal canvas is the
+    // content bounding box at a high resolution; CSS scales the <canvas> down to
+    // fit its container (object-fit), so the whole aircraft is visible and crisp
+    // at 100% browser zoom. Wide-and-short fits the canvas column naturally.
+    const width = bbox.maxX - bbox.minX + PAD * 2;
+    const height = bbox.maxY - bbox.minY + PAD * 2;
 
     const app = new Application();
     await app.init({
@@ -55,20 +55,18 @@ export class SimulationRenderer {
     });
 
     const canvas = app.canvas as HTMLCanvasElement;
-    // Fill the (bounded) host box and scale the drawing to fit while preserving
-    // aspect ratio, so the whole aircraft is visible at 100% browser zoom.
     canvas.style.width = '100%';
-    canvas.style.height = '100%';
+    canvas.style.height = 'auto';
+    canvas.style.maxHeight = '76vh';
     canvas.style.objectFit = 'contain';
     canvas.style.display = 'block';
+    canvas.style.margin = '0 auto';
     host.appendChild(canvas);
 
-    // Rotate the whole world (cabin + agents + heatmap together) so the seat/aisle
-    // coordinate mapping is preserved exactly — only the presentation rotates.
-    // screen = (-localY, localX) + position; position places the content bbox.
+    // Offset the world so the content bbox sits inside the padded canvas. Agents
+    // and the heatmap are children of `world`, so their geo mapping is preserved.
     const world = new Container();
-    world.rotation = Math.PI / 2;
-    world.position.set(PAD + bbox.maxY, PAD - bbox.minX);
+    world.position.set(PAD - bbox.minX, PAD - bbox.minY);
     app.stage.addChild(world);
 
     world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static aircraft + cabin

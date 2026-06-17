@@ -9,9 +9,9 @@ import { AGENT_RADIUS, type CanvasGeometry } from './geometry';
 /** Exponential-smoothing rate for position interpolation (larger = snappier). */
 const SMOOTH = 14;
 /** Seconds for the gate → door → aisle boarding walk. */
-const ENTER_DURATION = 0.85;
-/** Radius of the waiting crowd at the gate. */
-const GATE_SCATTER = 17;
+const ENTER_DURATION = 0.8;
+/** Spacing between passengers waiting single-file in the jet-bridge queue. */
+const QUEUE_SPACING = 13;
 
 type Phase = 'queued' | 'entering' | 'cabin';
 
@@ -24,7 +24,7 @@ interface AgentVisual {
   /** Engine cell target (cabin phase). */
   engineX: number;
   engineY: number;
-  /** Gate-crowd target (queued phase). */
+  /** Queue-slot target (queued phase). */
   queueX: number;
   queueY: number;
   baseColor: number;
@@ -38,8 +38,8 @@ interface AgentVisual {
 /**
  * Owns the agent sprites and animates them every Pixi tick.
  *
- * Boarding is visualised through the jet bridge: passengers in the `Queued`
- * state wait as a crowd at the gate (far end of the bridge); when the engine
+ * Boarding is visualised through the jet bridge: `Queued` passengers form a
+ * single-file line at the gate (ordered by boarding sequence). When the engine
  * admits one, it walks the gangway, enters the Row 0 door, and turns 90° into
  * the central aisle before handing off to normal engine-driven aisle movement.
  * Snapshots carry discrete cell positions; the per-frame `update` lerps the
@@ -50,7 +50,10 @@ export class AgentRenderer {
   private readonly bodyTexture: Texture;
   private readonly agents = new Map<number, AgentVisual>();
   private latest: ReadonlyArray<SnapshotAgent> = [];
-  /** Cumulative lengths of the gate→door→aisle path, for arc-length lerp. */
+  /** Unit vector from the door back toward the gate (queue direction). */
+  private readonly bridgeUx: number;
+  private readonly bridgeUy: number;
+  private readonly bridgeLen: number;
   private readonly seg1: number;
   private readonly seg2: number;
 
@@ -64,17 +67,29 @@ export class AgentRenderer {
     circle.destroy();
 
     const e = anatomy.entry;
-    this.seg1 = Math.hypot(e.doorX - e.gateX, e.doorY - e.gateY);
+    const dx = e.gateX - e.doorX;
+    const dy = e.gateY - e.doorY;
+    this.bridgeLen = Math.hypot(dx, dy) || 1;
+    this.bridgeUx = dx / this.bridgeLen;
+    this.bridgeUy = dy / this.bridgeLen;
+    this.seg1 = this.bridgeLen;
     this.seg2 = Math.hypot(e.aisleX - e.doorX, e.aisleY - e.doorY);
   }
 
   /** Push the latest snapshot; updates targets/phase without touching the GPU. */
   setSnapshot(agents: ReadonlyArray<SnapshotAgent>): void {
     this.latest = agents;
+
+    // Rank queued passengers by id (≈ boarding order) for the single-file line.
+    const rank = new Map<number, number>();
+    const queued = agents.filter((a) => a.state === PassengerState.Queued);
+    queued.sort((a, b) => a.id - b.id);
+    for (let i = 0; i < queued.length; i++) rank.set(queued[i].id, i);
+
     for (const agent of agents) {
       let visual = this.agents.get(agent.id);
       if (!visual) {
-        visual = this.spawn(agent);
+        visual = this.spawn(agent, rank.get(agent.id) ?? 0);
         this.agents.set(agent.id, visual);
       }
       const color = SEAT_COLORS[agent.seatType];
@@ -84,7 +99,7 @@ export class AgentRenderer {
 
       if (agent.state === PassengerState.Queued) {
         visual.phase = 'queued';
-        const slot = this.gateSlot(agent.id);
+        const slot = this.queueSlot(rank.get(agent.id) ?? 0);
         visual.queueX = slot[0];
         visual.queueY = slot[1];
       } else {
@@ -102,7 +117,7 @@ export class AgentRenderer {
     return this.latest;
   }
 
-  private spawn(agent: SnapshotAgent): AgentVisual {
+  private spawn(agent: SnapshotAgent, rank: number): AgentVisual {
     const base = SEAT_COLORS[agent.seatType];
     const body = new Sprite(this.bodyTexture);
     body.anchor.set(0.5);
@@ -118,7 +133,7 @@ export class AgentRenderer {
     const queued = agent.state === PassengerState.Queued;
     const engineX = this.geo.rowToX(agent.row);
     const engineY = this.geo.colToY(agent.col);
-    const slot = this.gateSlot(agent.id);
+    const slot = this.queueSlot(rank);
     const startX = queued ? slot[0] : engineX;
     const startY = queued ? slot[1] : engineY;
     container.position.set(startX, startY);
@@ -171,16 +186,11 @@ export class AgentRenderer {
     }
   }
 
-  /**
-   * A scattered slot in the waiting crowd at the jet-bridge gate. The spread is
-   * larger along the cabin axis (vertical on screen) than across it, so the
-   * crowd stays on-canvas near the top-left gate rather than running off-edge.
-   */
-  private gateSlot(id: number): [number, number] {
+  /** Single-file queue slot: rank 0 at the gate, higher ranks trailing back. */
+  private queueSlot(rank: number): [number, number] {
     const e = this.anatomy.entry;
-    const r1 = frac(Math.sin(id * 12.9898) * 43758.5453);
-    const r2 = frac(Math.sin(id * 78.233) * 43758.5453);
-    return [e.gateX + (r1 - 0.5) * GATE_SCATTER * 4, e.gateY + (r2 - 0.5) * GATE_SCATTER];
+    const d = this.bridgeLen + rank * QUEUE_SPACING;
+    return [e.doorX + this.bridgeUx * d, e.doorY + this.bridgeUy * d];
   }
 
   /** Point along the gate → door → aisle-entrance path at arc-fraction `t`. */
@@ -217,9 +227,9 @@ export class AgentRenderer {
         break;
       }
       case PassengerState.Queued: {
-        visual.container.scale.set(0.82);
+        visual.container.scale.set(0.78);
         visual.body.tint = visual.baseColor;
-        visual.body.alpha = 0.4;
+        visual.body.alpha = 0.5;
         visual.arc.clear();
         break;
       }
@@ -246,9 +256,4 @@ export class AgentRenderer {
     this.agents.clear();
     this.latest = [];
   }
-}
-
-/** Fractional part, for cheap deterministic per-id scatter. */
-function frac(n: number): number {
-  return n - Math.floor(n);
 }

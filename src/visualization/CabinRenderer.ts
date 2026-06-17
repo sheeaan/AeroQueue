@@ -17,29 +17,29 @@ import {
 } from './colors';
 import type { CanvasGeometry } from './geometry';
 
-// ── Anatomy proportions (px, logical coords: front = -X, tail = +X) ───────────
-// The SimulationRenderer rotates the world +90° for display, so this lays out
-// vertically: nose up, tail down — like an A320 seat-map schematic.
-const NOSE_LEN = 58; // short, blunt nose cone (A320-like)
-const TAIL_LEN = 104; // moderate tapered tail cone
-const TAIL_TIP_RATIO = 0.24; // tail-cone end half-height as a fraction of body half-height
-const BODY_PAD_Y = 7; // fuselage half-height beyond the outermost seats (tight)
-const BODY_PAD_FRONT = 40; // cabin space ahead of row 0 (cockpit door / fwd galley)
-const BODY_PAD_REAR = 36; // cabin space behind the last row (aft galley / lav)
+// ── Anatomy proportions (px) ──────────────────────────────────────────────────
+// Horizontal layout: nose at -X (left), tail at +X (right), aisle along the
+// centre. Tuned for an A320-like seat-map silhouette.
+const NOSE_LEN = 56; // short, blunt nose cone (A320-like)
+const TAIL_LEN = 86; // moderate, blunt tapered tail cone (not a rocket point)
+const TAIL_TIP_RATIO = 0.3; // tail-cone end half-height as a fraction of body half-height
+const BODY_PAD_Y = 6; // fuselage half-height beyond the outermost seats (tight)
+const BODY_PAD_FRONT = 34; // cabin space ahead of row 0 (cockpit door / fwd galley)
+const BODY_PAD_REAR = 28; // cabin space behind the last row (aft galley / lav)
 
-const WING_SPAN = 86; // wing reach beyond the fuselage edge
+const WING_SPAN = 74; // wing reach beyond the fuselage edge
 const WING_ROOT_ROW = 14; // wing root anchored mid-fuselage
-const WING_ROOT_CHORD = 132;
-const WING_SWEEP = 84;
-const WING_TIP_CHORD = 34;
-const STAB_SPAN = 40; // horizontal stabilizer reach
-const STAB_AT = 0.26; // position along the tail cone (0 = base, 1 = tip)
-const STAB_CHORD = 52;
-const STAB_SWEEP = 30;
+const WING_ROOT_CHORD = 120;
+const WING_SWEEP = 68;
+const WING_TIP_CHORD = 32;
+const STAB_SPAN = 34; // horizontal stabilizer reach
+const STAB_AT = 0.18; // position along the tail cone (0 = base, 1 = tip)
+const STAB_CHORD = 46;
+const STAB_SWEEP = 26;
 
-const JET_GATE_RISE = 70; // jet-bridge gate offset from the fuselage side
-const GATE_W = 40;
-const GATE_H = 26;
+const JET_GATE_RISE = 64; // jet-bridge gate offset from the fuselage side
+const GATE_W = 38;
+const GATE_H = 24;
 
 /** Jet-bridge waypoints (logical coords) shared with the agent entry animation. */
 export interface JetBridgePath {
