@@ -10,14 +10,14 @@ import { HeatmapRenderer } from './HeatmapRenderer';
 
 /**
  * Top-level PixiJS orchestrator. Owns the `Application`, composes the three
- * layers (static cabin → heatmap overlay → agents), and runs a single Pixi
+ * layers (static lattice → heatmap overlay → agents), and runs a single Pixi
  * ticker that interpolates agents and repaints the heatmap at 60 FPS.
  *
  * Sizing uses **mathematical letterbox scaling**: the scene is authored in a
- * fixed logical coordinate space (the aircraft + jet-bridge bounding box) and
- * the whole `world` container is scaled by `min(w/logicalW, h/logicalH)` and
- * centred on every resize, so the entire horizontal plane always fits the
- * canvas with zero clipping at 100% browser zoom.
+ * fixed logical coordinate space (the lattice bounding box, a long narrow
+ * rectangle) and the whole `world` container is scaled by
+ * `min(w/logicalW, h/logicalH)` and centred on every resize, so the entire
+ * row-by-column grid always fits the canvas with zero clipping at 100% zoom.
  *
  * The engine is consumed through the decoupled pull channel: `applySnapshot` is
  * fed by `useSimulationFrames`, never via React state — so the animation loop
@@ -50,7 +50,7 @@ export class SimulationRenderer {
     const anatomy = computeAnatomy(geo);
     const { bbox } = anatomy;
 
-    // Logical scene size: full aircraft length (+ jet-bridge) × wingspan (+ pad).
+    // Logical scene size: the full lattice (rows × columns) + entry runway (+ pad).
     const logicalWidth = bbox.maxX - bbox.minX;
     const logicalHeight = bbox.maxY - bbox.minY;
 
@@ -81,10 +81,10 @@ export class SimulationRenderer {
     const world = new Container();
     app.stage.addChild(world);
 
-    world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static aircraft + cabin
+    world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static lattice
     const heatmap = new HeatmapRenderer(geo, app.renderer);
     world.addChild(heatmap.sprite); // 2. congestion overlay
-    const agents = new AgentRenderer(geo, anatomy, app.renderer);
+    const agents = new AgentRenderer(geo, anatomy);
     world.addChild(agents.layer); // 3. agents on top
 
     return new SimulationRenderer(

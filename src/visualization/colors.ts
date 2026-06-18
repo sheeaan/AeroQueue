@@ -1,45 +1,34 @@
 import type { SeatColumnType } from '@/simulation/domain/geometry';
 
 /**
- * Palette for the visualisation. Agents are colour-coded by seat type so that
- * the lateral sorting of a strategy (e.g. WilMA's blue → green → red wave) is
- * legible at a glance without any text.
+ * Palette for the abstract physics-simulation aesthetic.
+ *
+ * The cabin is rendered as a raw cellular-automata lattice on a near-black field
+ * — no aircraft anatomy. Agents are high-contrast "data points" colour-coded by
+ * seat type on a strictly technical RGB-primary palette, so the lateral sorting
+ * of a strategy (e.g. WilMA's window → middle → aisle wave) reads at a glance.
  */
 export const SEAT_COLORS: Record<SeatColumnType, number> = {
-  window: 0x4ea1ff, // blue
-  middle: 0x4ade80, // green
-  aisle: 0xf87171, // red
+  window: 0x00e5ff, // cyan
+  middle: 0xff2bd6, // magenta
+  aisle: 0xffe600, // yellow
 };
 
-/** High-contrast colour an agent flashes toward while Blocked. */
-export const COLOR_BLOCKED_FLASH = 0xffffff;
+/** Stark, high-contrast red an agent flashes toward while Blocked (aisle interference). */
+export const COLOR_BLOCKED_FLASH = 0xff1733;
 
-export const COLOR_CABIN_BG = 0x0b1120;
+/** Bright accent for the Stowing loading-arc / pulse indicator. */
+export const COLOR_STOW_ARC = 0xffffff;
 
-// ── Aircraft anatomy (airline seat-map blueprint) ─────────────────────
-// Tuned to read like a professional cabin diagram (AeroLOPA / SeatGuru) on the
-// dark page: a near-black fuselage tube, a crisp metallic edge, swept-back
-// brushed-metal wings, and crisp per-type seat blocks.
-export const COLOR_HULL_FILL = 0x111a2c; // near-black fuselage interior
-export const COLOR_HULL_STROKE = 0x8aa4cf; // crisp metallic hull edge
-export const COLOR_WING_FILL = 0x3f4f6e; // brushed-metal wing
-export const COLOR_WING_STROKE = 0x59719c; // wing edge
-export const COLOR_WING_SHEEN = 0x6b80a6; // wing highlight
-export const COLOR_JETBRIDGE_FILL = 0x28324d; // jet-bridge gangway
-export const COLOR_JETBRIDGE_STROKE = 0x5a76a8;
-export const COLOR_DOOR = 0xbfe0ff;
-export const COLOR_SEAT_OUTLINE = 0x6a93cf; // light-blue seat outline
-export const COLOR_FIXTURE = 0x33446a; // galley / lavatory blocks
-export const COLOR_AISLE_LINE = 0x556e9d;
-export const COLOR_EXIT = 0x49c46a;
-export const COLOR_COCKPIT = 0x9fd2ff;
-
-/** Seat fill by lateral type — muted, professional, light→dark window→aisle. */
-export const SEAT_TYPE_COLORS: Record<SeatColumnType, number> = {
-  window: 0x456c93, // steel blue
-  middle: 0x375573, // muted blue
-  aisle: 0x2c3c54, // dark slate
-};
+// ── Lattice (cellular-automata matrix) ────────────────────────────────────────
+/** Pure dark background — the void the simulation runs against. */
+export const COLOR_CABIN_BG = 0x05070c;
+/** Dark technical grey for the unfilled seat-cell wireframes. */
+export const COLOR_CELL_STROKE = 0x2b3a52;
+/** Faint subtle track marking the central aisle corridor. */
+export const COLOR_AISLE_TRACK = 0x16263f;
+/** Thin registration frame bounding the whole lattice. */
+export const COLOR_LATTICE_FRAME = 0x1b2740;
 
 /** Component-wise linear interpolation between two packed RGB colours. */
 export function lerpColor(a: number, b: number, t: number): number {
