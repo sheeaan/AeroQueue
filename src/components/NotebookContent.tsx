@@ -1,6 +1,7 @@
 'use client';
 
-import 'katex/dist/katex.min.css';
+// Note: the KaTeX stylesheet is imported globally in `app/layout.tsx`, NOT here —
+// importing CSS inside this lazily-loaded (`ssr:false`) chunk can crash on open.
 import katex from 'katex';
 
 /** Render a LaTeX string to HTML via KaTeX (SSR-safe — returns a string). */
