@@ -122,8 +122,9 @@ export function DistributionChart({ samples }: { samples: number[] }) {
         {/* CDF overlay */}
         <polyline points={cdfPoints} className="dist-cdf" />
 
-        {/* baseline */}
+        {/* L-shaped plotter axes (white on blue) */}
         <line x1={padL} y1={baseY} x2={W - padR} y2={baseY} className="dist-axis" />
+        <line x1={padL} y1={padT} x2={padL} y2={baseY} className="dist-axis" />
 
         {/* x labels */}
         <text x={padL} y={H - 7} className="dist-label" textAnchor="start">

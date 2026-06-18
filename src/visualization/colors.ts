@@ -1,29 +1,20 @@
-import type { SeatColumnType } from '@/simulation/domain/geometry';
-
 /**
- * Palette for the NASA "Beginner's Guide to Aeronautics" (FoilSim) academic
- * aesthetic: a sterile black-and-white engineering diagram on pure white, with
- * passengers as flat, solid primary-colour discs. There are deliberately no
- * gradients, glows, shadows, tints, or interpolation helpers here — only the
- * hard hex values a classic textbook figure would use.
+ * Palette for the raw "NASA FoilSim" wind-tunnel aesthetic: a pitch-black field,
+ * a pure cyan wireframe lattice, and passengers as stark high-contrast squares.
+ * No gradients, glows, tints, or interpolation helpers — only hard hex values.
  */
 
-/** Pure white application background. */
-export const COLOR_CABIN_BG = 0xffffff;
+/** Pitch-black application background (the wind-tunnel view). */
+export const COLOR_CABIN_BG = 0x000000;
 
-/** Hard black for every diagram line (hull, wings, jet bridge, seats, aisle). */
-export const COLOR_DIAGRAM_LINE = 0x000000;
-/** Pure white fill for closed airframe shapes, so they read as clean outlines. */
-export const COLOR_DIAGRAM_FILL = 0xffffff;
+/** Pure cyan for the hollow 1px seat-cell wireframes (the mathematical grid). */
+export const COLOR_GRID = 0x00ffff;
 
-/** Flat primary agent colours by seat type. */
-export const SEAT_COLORS: Record<SeatColumnType, number> = {
-  window: 0x0000ff, // pure blue
-  middle: 0x00ff00, // pure green
-  aisle: 0xff0000, // pure red
-};
+/** Dim teal dashes marking the central aisle corridor. */
+export const COLOR_AISLE_DASH = 0x00aaaa;
 
-/** Static, stark fill an agent turns while Blocked (marks an aisle bottleneck). */
-export const COLOR_BLOCKED = 0xffff00; // pure yellow
-/** Static black outline used for the Stowing / Blocked diagram markers. */
-export const COLOR_AGENT_OUTLINE = 0x000000;
+/** Moving passenger (queued / walking / seated) — solid white square. */
+export const COLOR_AGENT_MOVING = 0xffffff;
+
+/** Held passenger (stowing or aisle-blocked) — solid yellow square. */
+export const COLOR_AGENT_HELD = 0xffff00;
