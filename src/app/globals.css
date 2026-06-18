@@ -1,23 +1,20 @@
 /*
- * Modern "analytics SaaS" aesthetic: a muted dark-slate theme, soft rounded
- * cards with subtle borders and shadows, and flat data-visualisation accents.
- * Clean and polished, but restrained — the data does the talking.
+ * Raw "NASA FoilSim" engineering-applet aesthetic: a sterile light page with
+ * hard 1px black borders, square corners, no shadows, no rounded anything, and
+ * plain system fonts. All colour lives in the data (the black wind-tunnel canvas
+ * and the blue/black plotters); the chrome stays deliberately grey and flat.
  */
 :root {
-  --bg: #111827; /* page */
-  --panel: #1b2536; /* elevated cards */
-  --inset: #131d2c; /* recessed inner cells */
-  --border: #374151; /* subtle borders */
-  --text: #e5e7eb; /* primary text */
-  --muted: #9ca3af; /* secondary text */
-  --accent: #60a5fa; /* soft blue */
-  --accent-strong: #3b82f6;
-  --window: #60a5fa; /* soft blue */
-  --middle: #2dd4bf; /* teal */
-  --aisle: #fb7185; /* coral */
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.22);
-  --radius: 12px;
-  --radius-sm: 8px;
+  --bg: #ffffff; /* page */
+  --panel: #ececec; /* light-grey panels */
+  --cell: #f7f7f7; /* inner cells */
+  --border: #000000; /* hard black borders */
+  --text: #000000; /* black text */
+  --muted: #333333; /* secondary text */
+  --accent: #0000ff; /* blue */
+  --window: #0000ff;
+  --middle: #008000;
+  --aisle: #ff0000;
 }
 
 * {
@@ -30,153 +27,141 @@ body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .shell {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 44px 24px 64px;
+  padding: 32px 24px 64px;
 }
 
 .eyebrow {
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-size: 12px;
   color: var(--accent);
-  margin: 0 0 8px;
-  font-weight: 600;
+  margin: 0 0 6px;
 }
 
 h1 {
   margin: 0 0 8px;
-  font-size: 30px;
-  letter-spacing: -0.01em;
+  font-size: 28px;
+  font-weight: bold;
 }
 
 .lede {
   color: var(--muted);
-  max-width: 64ch;
-  line-height: 1.6;
-  margin: 0 0 32px;
+  max-width: 70ch;
+  line-height: 1.5;
+  margin: 0 0 28px;
+  font-size: 14px;
 }
 
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 22px;
-  box-shadow: var(--shadow);
+  padding: 16px 18px;
 }
 
 .controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
-/* ── Buttons ──────────────────────────────────────────────────────────── */
+/* ── System form controls (default, unstyled look) ───────────────────── */
 button {
-  background: var(--accent-strong);
-  color: #fff;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 9px 16px;
-  font-size: 14px;
-  font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  color: #000;
+  background: #e0e0e0;
+  border: 1px solid #000;
+  border-radius: 0;
+  padding: 3px 12px;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
 button:hover {
-  background: #2f6fd6;
+  background: #d4d4d4;
 }
 
-button.secondary {
-  background: transparent;
-  border-color: var(--border);
-  color: var(--text);
-}
-
-button.secondary:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: #4b5563;
+button:active {
+  background: #c4c4c4;
 }
 
 button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+  color: #777;
+  cursor: default;
 }
 
 select {
-  background: var(--inset);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 9px 12px;
-  font-size: 14px;
-  font-weight: 600;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  color: #000;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 0;
+  padding: 2px 4px;
   cursor: pointer;
 }
 
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 .metric {
-  background: var(--inset);
+  background: var(--cell);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
+  padding: 12px;
 }
 
 .metric .label {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   color: var(--muted);
 }
 
 .metric .value {
-  font-size: 24px;
-  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  font-size: 22px;
+  font-weight: bold;
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
 }
 
 .note {
-  margin-top: 24px;
+  margin-top: 22px;
   font-size: 13px;
   color: var(--muted);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 code {
-  background: var(--inset);
+  background: #fff;
   border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 1px 5px;
-  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  border-radius: 0;
+  padding: 0 4px;
+  font-family: 'Courier New', monospace;
   font-size: 12px;
 }
 
-/* ── Simulation stage (canvas) ───────────────────────────────────────── */
+/* ── Simulation stage (the black wind-tunnel canvas) ─────────────────── */
 .stage {
   position: relative;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 0;
   overflow: hidden;
-  background: #0f1521;
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
-  box-shadow: var(--shadow);
 }
 
 .canvas-host {
@@ -192,27 +177,29 @@ code {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 240px;
-  color: var(--muted);
-  font-size: 14px;
+  min-height: 220px;
+  background: #000;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
 }
 
 /* ── Lab layout: canvas + sidebar ────────────────────────────────────── */
 .lab {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
   align-items: start;
 }
 
 .lab-canvas {
-  min-width: 0;
+  min-width: 0; /* allow the canvas column to shrink instead of overflowing */
 }
 
 .lab-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 @media (max-width: 900px) {
@@ -225,41 +212,41 @@ code {
   width: 100%;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: var(--shadow);
+  gap: 10px;
 }
 
 /* Segmented Realism / Simple mode toggle. */
 .mode-toggle {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--inset);
   border: 1px solid var(--border);
-  border-radius: 10px;
 }
 
 .mode-toggle button {
   flex: 1;
-  background: transparent;
-  color: var(--muted);
-  padding: 6px 8px;
+  border: none;
+  border-radius: 0;
+  background: #e0e0e0;
+  color: #333;
+  padding: 5px 8px;
   font-size: 13px;
-  border-radius: 6px;
+}
+
+.mode-toggle button + button {
+  border-left: 1px solid var(--border);
 }
 
 .mode-toggle button.mode-active {
-  background: var(--accent-strong);
+  background: var(--accent);
   color: #fff;
+  font-weight: bold;
 }
 
 .control-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -269,7 +256,7 @@ code {
 
 .control-row button {
   flex: 1;
-  padding: 8px 10px;
+  padding: 4px 8px;
 }
 
 .toggle {
@@ -277,12 +264,12 @@ code {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text);
   cursor: pointer;
 }
 
 .toggle input {
-  accent-color: var(--accent);
+  accent-color: #000;
 }
 
 .readout {
@@ -290,6 +277,8 @@ code {
   align-items: baseline;
   justify-content: space-between;
   font-size: 13px;
+  border-bottom: 1px dotted #bbb;
+  padding-bottom: 2px;
 }
 
 .readout-label {
@@ -297,7 +286,8 @@ code {
 }
 
 .readout-value {
-  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
   font-variant-numeric: tabular-nums;
 }
 
@@ -306,7 +296,7 @@ code {
   gap: 12px;
   margin-top: 2px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text);
 }
 
 .legend-item {
@@ -316,77 +306,62 @@ code {
 }
 
 .legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #000;
+  border-radius: 0;
   display: inline-block;
 }
 
-.dot-window {
-  background: var(--window);
+.dot-moving {
+  background: #ffffff;
 }
 
-.dot-middle {
-  background: var(--middle);
+.dot-held {
+  background: #ffff00;
 }
 
-.dot-aisle {
-  background: var(--aisle);
+.dot-seat {
+  background: #000000;
+  border-color: #00aaaa;
 }
 
-/* ── Analytics dashboard ─────────────────────────────────────────────── */
+/* ── Monte-Carlo analytics dashboard ─────────────────────────────────── */
 .analytics {
   width: 100%;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: var(--shadow);
+  gap: 10px;
 }
 
 .analytics-title {
   margin: 0;
   font-size: 15px;
+  font-weight: bold;
 }
 
 .analytics-sub {
-  margin: -8px 0 0;
+  margin: -6px 0 0;
   font-size: 12px;
   color: var(--muted);
 }
 
 .run-button {
   width: 100%;
-  padding: 10px;
+  padding: 6px;
 }
 
 .run-button:disabled {
   cursor: progress;
 }
 
-.evolve-button {
-  background: #7c3aed;
-}
-
-.evolve-button:hover {
-  background: #6d31d6;
-}
-
-.compare-button {
-  background: #0d9488;
-}
-
-.compare-button:hover {
-  background: #0b8276;
-}
-
 .progress {
-  height: 8px;
-  border-radius: 5px;
-  background: var(--inset);
+  height: 10px;
+  border-radius: 0;
+  background: #fff;
   border: 1px solid var(--border);
   overflow: hidden;
 }
@@ -394,7 +369,6 @@ code {
 .progress-fill {
   height: 100%;
   background: var(--accent);
-  transition: width 0.12s linear;
 }
 
 .analytics-result {
@@ -415,23 +389,23 @@ code {
 
 .stale-tag {
   font-size: 11px;
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.4);
-  border-radius: 5px;
+  color: #000;
+  background: #ffff00;
+  border: 1px solid #000;
+  border-radius: 0;
   padding: 0 5px;
 }
 
 .stat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .stat {
-  background: var(--inset);
+  background: var(--cell);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
+  padding: 10px;
   text-align: center;
 }
 
@@ -439,12 +413,13 @@ code {
   font-size: 11px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 
 .stat-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  font-weight: bold;
   margin-top: 4px;
   font-variant-numeric: tabular-nums;
 }
@@ -461,6 +436,7 @@ code {
   flex-wrap: wrap;
   font-size: 12px;
   color: var(--muted);
+  font-family: 'Courier New', monospace;
   font-variant-numeric: tabular-nums;
 }
 
@@ -478,10 +454,9 @@ code {
 
 /* ── Genetic-algorithm result ────────────────────────────────────────── */
 .ga-result {
-  background: var(--inset);
+  background: var(--cell);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
+  padding: 10px;
 }
 
 .ga-headline {
@@ -489,40 +464,41 @@ code {
   font-size: 13px;
 }
 
-/* ── Distribution chart (histogram + CDF) ────────────────────────────── */
+/* ── Distribution chart — NASA blue plotter ──────────────────────────── */
 .dist-chart svg {
   width: 100%;
   height: auto;
   display: block;
-  background: #0f1a2b;
+  background: #0000ff;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
 }
 
 .dist-bar {
-  fill: rgba(96, 165, 250, 0.6);
+  fill: #ffffff;
 }
 
 .dist-cdf {
   fill: none;
-  stroke: #2dd4bf;
+  stroke: #ffffff;
   stroke-width: 2;
   stroke-linejoin: round;
 }
 
 .dist-mean {
-  stroke: #fb7185;
+  stroke: #ffffff;
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
 
 .dist-axis {
-  stroke: var(--border);
+  stroke: #ffffff;
   stroke-width: 1;
 }
 
 .dist-label {
-  fill: var(--muted);
+  fill: #ffffff;
+  font-family: 'Courier New', monospace;
   font-size: 9px;
 }
 
@@ -539,24 +515,25 @@ code {
   width: 10px;
   height: 10px;
   display: inline-block;
-  border-radius: 2px;
+  border: 1px solid #000;
+  border-radius: 0;
   vertical-align: middle;
   margin-right: 4px;
 }
 
 .swatch-bar {
-  background: rgba(96, 165, 250, 0.8);
+  background: #ffffff;
 }
 
 .swatch-cdf {
-  background: #2dd4bf;
+  background: #0000ff;
 }
 
 .dist-spread {
   margin-left: auto;
 }
 
-/* ── Comparative bar chart ───────────────────────────────────────────── */
+/* ── Comparative bar chart — raw OR-study plotter (black, white axes) ──── */
 .compare-result {
   display: flex;
   flex-direction: column;
@@ -567,55 +544,55 @@ code {
   width: 100%;
   height: auto;
   display: block;
-  background: #0f1a2b;
+  background: #000000;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 0;
 }
 
 .cmp-grid {
-  stroke: rgba(55, 65, 81, 0.5);
+  stroke: #444444;
   stroke-width: 1;
 }
 
 .cmp-axis {
-  stroke: var(--border);
+  stroke: #ffffff;
   stroke-width: 1;
 }
 
 .cmp-ylabel {
-  fill: var(--muted);
+  fill: #ffffff;
+  font-family: 'Courier New', monospace;
   font-size: 9px;
-  font-variant-numeric: tabular-nums;
 }
 
 .cmp-xlabel {
-  fill: #cbd5e1;
+  fill: #ffffff;
   font-size: 9px;
 }
 
 .cmp-value {
-  fill: var(--text);
+  fill: #ffffff;
+  font-family: 'Courier New', monospace;
   font-size: 9px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  font-weight: bold;
 }
 
 .cmp-err {
-  stroke: #e5e7eb;
+  stroke: #ffffff;
   stroke-width: 1.5;
-  opacity: 0.85;
 }
 
 .cmp-baseline {
-  stroke: #ef4444;
+  stroke: #ff0000;
   stroke-width: 1.5;
   stroke-dasharray: 5 4;
 }
 
 .cmp-baseline-label {
-  fill: #f87171;
+  fill: #ff0000;
+  font-family: 'Courier New', monospace;
   font-size: 9px;
-  font-weight: 600;
+  font-weight: bold;
 }
 
 .cmp-legend {
@@ -630,21 +607,22 @@ code {
   width: 10px;
   height: 10px;
   display: inline-block;
-  border-radius: 2px;
+  border: 1px solid #000;
+  border-radius: 0;
   vertical-align: middle;
   margin-right: 4px;
 }
 
 .cmp-swatch-bar {
-  background: #60a5fa;
+  background: #ff7f0e;
 }
 
 .cmp-swatch-err {
-  background: #e5e7eb;
+  background: #ffffff;
 }
 
 .cmp-swatch-base {
-  background: #ef4444;
+  background: #ff0000;
 }
 
 /* ── Engineering Notebook modal ──────────────────────────────────────── */
@@ -656,8 +634,7 @@ code {
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(2, 6, 16, 0.72);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .modal {
@@ -666,8 +643,7 @@ code {
   overflow: auto;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  border-radius: 0;
 }
 
 .modal-header {
@@ -676,30 +652,27 @@ code {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 12px 18px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: bold;
 }
 
 .modal-close {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: var(--radius-sm);
-  padding: 4px 10px;
+  padding: 2px 10px;
 }
 
 .notebook-body {
-  padding: 4px 22px 24px;
+  padding: 4px 20px 22px;
 }
 
 .notebook-body section {
-  padding: 16px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -711,11 +684,12 @@ code {
   font-size: 14px;
   color: var(--accent);
   margin: 0 0 8px;
+  font-weight: bold;
 }
 
 .notebook-body p {
   color: var(--text);
-  line-height: 1.65;
+  line-height: 1.6;
   font-size: 14px;
   margin: 0 0 8px;
 }

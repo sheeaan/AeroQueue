@@ -15,16 +15,16 @@ import type { CompareRow } from '@/workers/monteCarlo.worker';
  * makes it fully responsive inside the analytics panel.
  */
 
-/** Flat data-visualisation palette, assigned per sorted bar. */
+/** Bright categorical palette (raw OR-study plotter), assigned per sorted bar. */
 const BAR_PALETTE = [
-  '#fb7185', // coral (slowest)
-  '#f59e0b', // amber
-  '#facc15', // yellow
-  '#a78bfa', // violet
-  '#38bdf8', // sky
-  '#2dd4bf', // teal
-  '#34d399', // green
-  '#60a5fa', // blue (fastest)
+  '#ff7f0e', // orange
+  '#1f77b4', // blue
+  '#2ca02c', // green
+  '#ffd400', // yellow
+  '#9467bd', // violet
+  '#17becf', // cyan
+  '#e377c2', // pink
+  '#d62728', // red
 ];
 
 const W = 600;

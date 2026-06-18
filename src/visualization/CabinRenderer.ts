@@ -1,16 +1,18 @@
 import { Container, Graphics } from 'pixi.js';
 import type { CabinLayout } from '@/simulation/domain/Grid';
-import { COLOR_AISLE, COLOR_SEAT_FILL, COLOR_SEAT_STROKE } from './colors';
+import { COLOR_AISLE_DASH, COLOR_GRID } from './colors';
 import type { CanvasGeometry } from './geometry';
 
 // ── Grid metrics (px) ─────────────────────────────────────────────────────────
-// The cabin is a clean lattice (no aircraft anatomy): rows run along X
+// There is deliberately NO aircraft here — no hull, nose, tail, wings, or jet
+// bridge. The cabin is reduced to a pure mathematical lattice: rows run along X
 // (front → rear), the seat columns + aisle stack along Y, and the central aisle
-// is a subtle guide line the agents travel along.
+// is empty corridor marked by a dashed line.
 const SEAT_GAP = 6; // padding so each seat cell reads as a discrete site
-const SEAT_RADIUS = 4; // slightly rounded corners (modern, soft)
-const GRID_PAD = 14; // gap between the outermost cells and the bbox edge
+const GRID_PAD = 12; // gap between the outermost cells and the bbox edge
 const ENTRY_RUNWAY = 120; // staging length to the left where queued agents marshal
+const DASH_LEN = 7; // aisle dash length
+const DASH_GAP = 6; // aisle gap between dashes
 
 /** Logical X/Y of the aisle entry point, shared with the agent queue animation. */
 export interface EntryPath {
@@ -56,8 +58,8 @@ export function computeAnatomy(geo: CanvasGeometry): CabinAnatomy {
 }
 
 /**
- * Builds the static lattice, drawn once (zero per-frame cost): the subtle aisle
- * guide → the soft rounded seat-cell grid.
+ * Builds the static lattice, drawn once (zero per-frame cost): the dashed aisle
+ * track → the cyan seat-cell wireframe grid.
  */
 export function createCabinLayer(
   cabin: CabinLayout,
@@ -67,7 +69,7 @@ export function createCabinLayer(
   const layer = new Container();
 
   const aisle = new Graphics();
-  drawAisle(aisle, anatomy);
+  drawAisleDashes(aisle, anatomy);
   layer.addChild(aisle);
 
   const cells = new Graphics();
@@ -77,29 +79,27 @@ export function createCabinLayer(
   return layer;
 }
 
-/** Subtle central-aisle guide line (the corridor the agents travel along). */
-function drawAisle(g: Graphics, a: CabinAnatomy): void {
-  g.moveTo(a.entry.entryX, a.aisleY).lineTo(a.gridRightX, a.aisleY);
-  g.stroke({ width: 2, color: COLOR_AISLE, alpha: 0.8 });
+/** Central aisle as a simple dashed line (otherwise empty black corridor). */
+function drawAisleDashes(g: Graphics, a: CabinAnatomy): void {
+  let x = a.entry.entryX;
+  while (x < a.gridRightX) {
+    const x1 = Math.min(x + DASH_LEN, a.gridRightX);
+    g.moveTo(x, a.aisleY).lineTo(x1, a.aisleY);
+    x += DASH_LEN + DASH_GAP;
+  }
+  g.stroke({ width: 1, color: COLOR_AISLE_DASH, alpha: 1 });
 }
 
 /**
- * Every seat as a clean, slightly rounded rectangle with a soft muted fill and a
- * subtle border — a tidy matrix of sites the bright agents move between.
+ * Every seat as a strict, hollow, sharp-cornered 1px cyan wireframe rectangle —
+ * the bare matrix of sites the high-contrast agents move between.
  */
 function drawSeatCells(g: Graphics, cabin: CabinLayout, geo: CanvasGeometry): void {
   const size = geo.cell - SEAT_GAP;
   for (const seat of cabin.seats) {
     const x = geo.rowToX(seat.coord.row) - size / 2;
     const y = geo.colToY(seat.coord.col) - size / 2;
-    g.roundRect(x, y, size, size, SEAT_RADIUS);
+    g.rect(x, y, size, size); // sharp rectangle — never roundRect
   }
-  g.fill({ color: COLOR_SEAT_FILL, alpha: 1 });
-
-  for (const seat of cabin.seats) {
-    const x = geo.rowToX(seat.coord.row) - size / 2;
-    const y = geo.colToY(seat.coord.col) - size / 2;
-    g.roundRect(x, y, size, size, SEAT_RADIUS);
-  }
-  g.stroke({ width: 1, color: COLOR_SEAT_STROKE, alpha: 1 });
+  g.stroke({ width: 1, color: COLOR_GRID, alpha: 1 });
 }
