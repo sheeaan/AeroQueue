@@ -187,26 +187,30 @@ export function AnalyticsDashboard() {
 
   return (
     <section className="analytics">
-      <h2 className="analytics-title">Monte-Carlo Analytics</h2>
-      <p className="analytics-sub">
-        {strategyName(strategyId)} · {isSimpleMode ? 'Simple' : 'Realism'} mode
-      </p>
+      <div className="analytics-head">
+        <h2 className="analytics-title">Monte-Carlo Analytics</h2>
+        <p className="analytics-sub">
+          {strategyName(strategyId)} · {isSimpleMode ? 'Simple' : 'Realism'} mode
+        </p>
+      </div>
 
-      <button className="run-button" onClick={runMonteCarlo} disabled={busy}>
-        {activity === 'monte-carlo' ? `Running… ${pct}%` : `Run ${ITERATIONS} Simulations`}
-      </button>
+      <div className="analytics-actions">
+        <button className="run-button" onClick={runMonteCarlo} disabled={busy}>
+          {activity === 'monte-carlo' ? `Running… ${pct}%` : `Run ${ITERATIONS} Simulations`}
+        </button>
 
-      <button className="run-button evolve-button" onClick={runEvolve} disabled={busy}>
-        {activity === 'evolve'
-          ? gaStatus
-            ? `Evolving… gen ${gaStatus.generation}/${gaStatus.total} · best ${gaStatus.best === Infinity ? '—' : gaStatus.best.toFixed(0)}`
-            : `Evolving… ${pct}%`
-          : '🧬 Evolve Optimal Sequence'}
-      </button>
+        <button className="run-button evolve-button" onClick={runEvolve} disabled={busy}>
+          {activity === 'evolve'
+            ? gaStatus
+              ? `Evolving… gen ${gaStatus.generation}/${gaStatus.total} · best ${gaStatus.best === Infinity ? '—' : gaStatus.best.toFixed(0)}`
+              : `Evolving… ${pct}%`
+            : '🧬 Evolve Optimal Sequence'}
+        </button>
 
-      <button className="run-button compare-button" onClick={runCompare} disabled={busy}>
-        {activity === 'compare' ? `Comparing… ${pct}%` : '📊 Compare All Strategies'}
-      </button>
+        <button className="run-button compare-button" onClick={runCompare} disabled={busy}>
+          {activity === 'compare' ? `Comparing… ${pct}%` : '📊 Compare All Strategies'}
+        </button>
+      </div>
 
       {busy && (
         <div className="progress" role="progressbar" aria-valuenow={pct}>
@@ -228,19 +232,21 @@ export function AnalyticsDashboard() {
         </div>
       )}
 
-      {result && result.runs > 0 && samples && (
-        <MonteCarloResultView result={result} samples={samples} meta={meta} stale={stale} />
-      )}
+      <div className="analytics-results">
+        {result && result.runs > 0 && samples && (
+          <MonteCarloResultView result={result} samples={samples} meta={meta} stale={stale} />
+        )}
 
-      {compare && compare.rows.length > 0 && (
-        <div className="compare-result">
-          <p className="analytics-for">
-            Mean boarding time μ · {compare.rows[0].runs} runs ·{' '}
-            {compare.isSimpleMode ? 'Simple' : 'Realism'} mode
-          </p>
-          <ComparativeBarChart rows={compare.rows} freeBoardingTicks={compare.freeBoardingTicks} />
-        </div>
-      )}
+        {compare && compare.rows.length > 0 && (
+          <div className="compare-result">
+            <p className="analytics-for">
+              Mean boarding time μ · {compare.rows[0].runs} runs ·{' '}
+              {compare.isSimpleMode ? 'Simple' : 'Realism'} mode
+            </p>
+            <ComparativeBarChart rows={compare.rows} freeBoardingTicks={compare.freeBoardingTicks} />
+          </div>
+        )}
+      </div>
     </section>
   );
 }

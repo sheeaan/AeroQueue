@@ -20,23 +20,26 @@ const SimulationCanvas = dynamic(
 );
 
 /**
- * Two-column lab layout: the WebGL cabin on the left (always fully visible, no
- * overlays), and a dedicated sidebar on the right holding the controls and the
- * Monte-Carlo analytics. Collapses to a single column on narrow viewports.
+ * Vertically stacked "applet" layout, FoilSim-style: the wind-tunnel boarding
+ * canvas on top, its native controls directly beneath it, and then the full-
+ * width analysis block (Monte-Carlo plotter + comparative bar chart) below —
+ * each section separated by a thin gray rule.
  */
 export function SimulationView() {
   return (
     <SimulationProvider>
       <div className="lab">
-        <div className="lab-canvas">
+        <div className="lab-stage">
           <div className="stage">
             <SimulationCanvas />
           </div>
         </div>
-        <aside className="lab-sidebar">
+        <div className="lab-controls">
           <ControlPanel />
+        </div>
+        <div className="lab-analysis">
           <AnalyticsDashboard />
-        </aside>
+        </div>
       </div>
     </SimulationProvider>
   );
