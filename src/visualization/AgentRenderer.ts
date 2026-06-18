@@ -1,18 +1,19 @@
 import { Container, Graphics, Sprite, Texture } from 'pixi.js';
+import type { Renderer } from 'pixi.js';
 import type { SnapshotAgent } from '@/simulation/engine/SimulationEngine';
 import { PassengerState } from '@/simulation/domain/state';
 import type { CabinAnatomy } from './CabinRenderer';
-import { COLOR_BLOCKED_FLASH, COLOR_STOW_ARC, lerpColor, SEAT_COLORS } from './colors';
+import { COLOR_AGENT_ACCENT, COLOR_BLOCKED_FLASH, SEAT_COLORS } from './colors';
 import { AGENT_RADIUS, type CanvasGeometry } from './geometry';
 
 /** Exponential-smoothing rate for position interpolation (larger = snappier). */
 const SMOOTH = 14;
-/** Spacing between agents waiting single-file in the entry queue (px). */
+/** Seconds for the gate → door → aisle boarding walk. */
+const ENTER_DURATION = 0.8;
+/** Spacing between passengers waiting single-file in the jet-bridge queue. */
 const QUEUE_SPACING = 13;
-/** Displayed glow-dot diameter, in multiples of the logical agent radius. */
-const DOT_SCALE = 3.4;
 
-type Phase = 'queued' | 'cabin';
+type Phase = 'queued' | 'entering' | 'cabin';
 
 interface AgentVisual {
   container: Container;
@@ -30,31 +31,54 @@ interface AgentVisual {
   state: PassengerState;
   stowProgress: number;
   phase: Phase;
+  /** 0→1 progress along the jet-bridge entry path. */
+  enterT: number;
 }
 
 /**
- * Owns the agent "data points" and animates them every Pixi tick.
+ * Owns the agent discs and animates them every Pixi tick.
  *
- * Agents are high-contrast glowing dots moving through the cellular-automata
- * lattice. `Queued` passengers marshal in a single-file line to the LEFT of the
- * grid along the aisle row (ordered by boarding sequence); when the engine
- * admits one it streams RIGHT along the aisle to its row under engine-driven
- * motion. Snapshots carry discrete cell positions; the per-frame `update` lerps
- * each dot toward its current target for smooth motion. State is visualised
- * purely through colour/scale: a crisp loading arc while Stowing, a stark red
- * pulse while Blocked (aisle interference).
+ * Boarding is visualised through the top-left jet bridge: `Queued` passengers
+ * spawn at the gate and form a single-file line up the gangway above the forward
+ * port door (ordered by boarding sequence). When the engine admits one, it walks
+ * vertically DOWN the gangway, through the door, and turns 90° into the central
+ * aisle, then hands off to engine-driven motion that carries it horizontally
+ * RIGHT to its seat. Snapshots carry discrete cell positions; the per-frame
+ * `update` lerps each disc toward its current target for smooth motion.
+ *
+ * Agents are flat, bright, solid discs (no gradients): a thick dark loading arc
+ * marks the Stowing delay; a sharp amber fill + ring marks an aisle bottleneck
+ * while Blocked.
  */
 export class AgentRenderer {
   readonly layer = new Container();
   private readonly bodyTexture: Texture;
   private readonly agents = new Map<number, AgentVisual>();
   private latest: ReadonlyArray<SnapshotAgent> = [];
+  /** Unit vector from the door back toward the gate (queue direction). */
+  private readonly bridgeUx: number;
+  private readonly bridgeUy: number;
+  private readonly bridgeLen: number;
+  private readonly seg1: number;
+  private readonly seg2: number;
 
   constructor(
     private readonly geo: CanvasGeometry,
     private readonly anatomy: CabinAnatomy,
+    renderer: Renderer,
   ) {
-    this.bodyTexture = makeGlowTexture();
+    const circle = new Graphics().circle(0, 0, AGENT_RADIUS * 2).fill(0xffffff);
+    this.bodyTexture = renderer.generateTexture(circle);
+    circle.destroy();
+
+    const e = anatomy.entry;
+    const dx = e.gateX - e.doorX;
+    const dy = e.gateY - e.doorY;
+    this.bridgeLen = Math.hypot(dx, dy) || 1;
+    this.bridgeUx = dx / this.bridgeLen;
+    this.bridgeUy = dy / this.bridgeLen;
+    this.seg1 = this.bridgeLen;
+    this.seg2 = Math.hypot(e.aisleX - e.doorX, e.aisleY - e.doorY);
   }
 
   /** Push the latest snapshot; updates targets/phase without touching the GPU. */
@@ -84,7 +108,10 @@ export class AgentRenderer {
         visual.queueX = slot[0];
         visual.queueY = slot[1];
       } else {
-        visual.phase = 'cabin';
+        if (visual.phase === 'queued') {
+          visual.phase = 'entering';
+          visual.enterT = 0;
+        }
         visual.engineX = this.geo.rowToX(agent.row);
         visual.engineY = this.geo.colToY(agent.col);
       }
@@ -99,8 +126,8 @@ export class AgentRenderer {
     const base = SEAT_COLORS[agent.seatType];
     const body = new Sprite(this.bodyTexture);
     body.anchor.set(0.5);
-    body.width = AGENT_RADIUS * DOT_SCALE;
-    body.height = AGENT_RADIUS * DOT_SCALE;
+    body.width = AGENT_RADIUS * 2;
+    body.height = AGENT_RADIUS * 2;
     body.tint = base;
 
     const arc = new Graphics();
@@ -131,6 +158,7 @@ export class AgentRenderer {
       state: agent.state,
       stowProgress: agent.stowProgress,
       phase: queued ? 'queued' : 'cabin',
+      enterT: queued ? 0 : 1,
     };
   }
 
@@ -138,8 +166,24 @@ export class AgentRenderer {
   update(dt: number, time: number): void {
     const f = 1 - Math.exp(-dt * SMOOTH);
     for (const visual of this.agents.values()) {
-      const tx = visual.phase === 'queued' ? visual.queueX : visual.engineX;
-      const ty = visual.phase === 'queued' ? visual.queueY : visual.engineY;
+      let tx: number;
+      let ty: number;
+      if (visual.phase === 'queued') {
+        tx = visual.queueX;
+        ty = visual.queueY;
+      } else if (visual.phase === 'entering') {
+        visual.enterT += dt / ENTER_DURATION;
+        if (visual.enterT >= 1) {
+          visual.enterT = 1;
+          visual.phase = 'cabin';
+        }
+        const point = this.entryPoint(visual.enterT);
+        tx = point[0];
+        ty = point[1];
+      } else {
+        tx = visual.engineX;
+        ty = visual.engineY;
+      }
       visual.x += (tx - visual.x) * f;
       visual.y += (ty - visual.y) * f;
       visual.container.position.set(visual.x, visual.y);
@@ -147,50 +191,67 @@ export class AgentRenderer {
     }
   }
 
-  /** Single-file queue slot: rank 0 just left of the entry, higher ranks trailing back. */
+  /** Single-file queue slot: rank 0 at the gate, higher ranks trailing back. */
   private queueSlot(rank: number): [number, number] {
     const e = this.anatomy.entry;
-    return [e.entryX - (rank + 1) * QUEUE_SPACING, e.aisleY];
+    const d = this.bridgeLen + rank * QUEUE_SPACING;
+    return [e.doorX + this.bridgeUx * d, e.doorY + this.bridgeUy * d];
+  }
+
+  /** Point along the gate → door → aisle-entrance path at arc-fraction `t`. */
+  private entryPoint(t: number): [number, number] {
+    const e = this.anatomy.entry;
+    const total = this.seg1 + this.seg2 || 1;
+    const split = this.seg1 / total;
+    if (t <= split) {
+      const u = split === 0 ? 1 : t / split;
+      return [e.gateX + (e.doorX - e.gateX) * u, e.gateY + (e.doorY - e.gateY) * u];
+    }
+    const u = (t - split) / (1 - split || 1);
+    return [e.doorX + (e.aisleX - e.doorX) * u, e.doorY + (e.aisleY - e.doorY) * u];
   }
 
   private applyState(visual: AgentVisual, time: number): void {
     switch (visual.state) {
       case PassengerState.Stowing: {
-        // Emphasise the mathematical stow delay: a crisp loading arc + bright pulse.
-        visual.container.scale.set(1 + 0.18 * Math.sin(time * 8));
+        // Emphasise the stow delay with a thick dark loading arc + gentle pulse.
+        visual.container.scale.set(1 + 0.14 * Math.sin(time * 8));
         visual.body.tint = visual.baseColor;
         visual.body.alpha = 1;
         visual.arc.clear();
         const start = -Math.PI / 2;
         visual.arc
           .arc(0, 0, AGENT_RADIUS + 3, start, start + visual.stowProgress * Math.PI * 2)
-          .stroke({ width: 2, color: COLOR_STOW_ARC, alpha: 0.95 });
+          .stroke({ width: 3.5, color: COLOR_AGENT_ACCENT, alpha: 1 });
         break;
       }
       case PassengerState.Blocked: {
-        // Aisle interference → flash a stark, high-contrast red bottleneck.
-        visual.container.scale.set(1);
-        visual.body.tint = lerpColor(visual.baseColor, COLOR_BLOCKED_FLASH, 0.5 + 0.5 * Math.sin(time * 14));
+        // Aisle interference → sharp amber fill + a thick ring marks the bottleneck.
+        visual.container.scale.set(1 + 0.06 * Math.sin(time * 12));
+        visual.body.tint = COLOR_BLOCKED_FLASH;
         visual.body.alpha = 1;
         visual.arc.clear();
+        visual.arc
+          .circle(0, 0, AGENT_RADIUS + 2.5)
+          .stroke({ width: 3, color: COLOR_AGENT_ACCENT, alpha: 1 });
         break;
       }
       case PassengerState.Queued: {
-        visual.container.scale.set(0.74);
+        visual.container.scale.set(0.8);
         visual.body.tint = visual.baseColor;
-        visual.body.alpha = 0.55;
+        visual.body.alpha = 0.65;
         visual.arc.clear();
         break;
       }
       case PassengerState.Seated: {
-        visual.container.scale.set(0.82);
+        visual.container.scale.set(0.9);
         visual.body.tint = visual.baseColor;
-        visual.body.alpha = 0.9;
+        visual.body.alpha = 1;
         visual.arc.clear();
         break;
       }
       default: {
-        // Walking the aisle.
+        // Walking (incl. the jet-bridge entry walk)
         visual.container.scale.set(1);
         visual.body.tint = visual.baseColor;
         visual.body.alpha = 1;
@@ -205,27 +266,4 @@ export class AgentRenderer {
     this.agents.clear();
     this.latest = [];
   }
-}
-
-/**
- * A soft radial-gradient "glow dot": a bright solid core fading to a transparent
- * halo, so a tinted sprite reads as a glowing data point on the dark lattice.
- */
-function makeGlowTexture(): Texture {
-  const size = 64;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-  const r = size / 2;
-  const gradient = ctx.createRadialGradient(r, r, 0, r, r, r);
-  gradient.addColorStop(0, 'rgba(255,255,255,1)');
-  gradient.addColorStop(0.4, 'rgba(255,255,255,1)');
-  gradient.addColorStop(0.6, 'rgba(255,255,255,0.45)');
-  gradient.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(r, r, r, 0, Math.PI * 2);
-  ctx.fill();
-  return Texture.from(canvas);
 }

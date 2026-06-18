@@ -1,34 +1,42 @@
 import type { SeatColumnType } from '@/simulation/domain/geometry';
 
 /**
- * Palette for the abstract physics-simulation aesthetic.
- *
- * The cabin is rendered as a raw cellular-automata lattice on a near-black field
- * — no aircraft anatomy. Agents are high-contrast "data points" colour-coded by
- * seat type on a strictly technical RGB-primary palette, so the lateral sorting
- * of a strategy (e.g. WilMA's window → middle → aisle wave) reads at a glance.
+ * Palette for the minimalist "educational video" aesthetic (CGP-Grey-style flat
+ * vector art on a light field). The airframe is rendered as a clean light-gray
+ * outline so attention stays on the agents, which are bright, flat, primary
+ * discs that pop against the off-white background and read instantly by seat
+ * type (window = blue, middle = green, aisle = red).
  */
 export const SEAT_COLORS: Record<SeatColumnType, number> = {
-  window: 0x00e5ff, // cyan
-  middle: 0xff2bd6, // magenta
-  aisle: 0xffe600, // yellow
+  window: 0x2563eb, // blue
+  middle: 0x16a34a, // green
+  aisle: 0xdc2626, // red
 };
 
-/** Stark, high-contrast red an agent flashes toward while Blocked (aisle interference). */
-export const COLOR_BLOCKED_FLASH = 0xff1733;
+/**
+ * Sharp, high-contrast amber an agent switches to while Blocked, so an aisle
+ * bottleneck pops out from the blue/green/red traffic at a glance.
+ */
+export const COLOR_BLOCKED_FLASH = 0xf59e0b;
 
-/** Bright accent for the Stowing loading-arc / pulse indicator. */
-export const COLOR_STOW_ARC = 0xffffff;
+/** Crisp dark accent for the Stowing loading arc and the Blocked ring. */
+export const COLOR_AGENT_ACCENT = 0x1f2937;
 
-// ── Lattice (cellular-automata matrix) ────────────────────────────────────────
-/** Pure dark background — the void the simulation runs against. */
-export const COLOR_CABIN_BG = 0x05070c;
-/** Dark technical grey for the unfilled seat-cell wireframes. */
-export const COLOR_CELL_STROKE = 0x2b3a52;
-/** Faint subtle track marking the central aisle corridor. */
-export const COLOR_AISLE_TRACK = 0x16263f;
-/** Thin registration frame bounding the whole lattice. */
-export const COLOR_LATTICE_FRAME = 0x1b2740;
+/** Soft off-white page colour — the clean educational backdrop. */
+export const COLOR_CABIN_BG = 0xf8f9fa;
+
+// ── Flat airframe palette ─────────────────────────────────────────────────────
+// Light-gray fills with a single thick, crisp dark-gray stroke. No gradients,
+// sheens, nacelles, or cockpit detail — just clean vector outlines.
+export const COLOR_HULL_FILL = 0xeceff3; // light-gray fuselage
+export const COLOR_HULL_STROKE = 0x374151; // thick dark-gray outline
+export const COLOR_WING_FILL = 0xdfe4ea; // slightly deeper gray wings
+export const COLOR_WING_STROKE = 0x374151;
+export const COLOR_JETBRIDGE_FILL = 0xe5e7eb; // jet-bridge gangway
+export const COLOR_JETBRIDGE_STROKE = 0x374151;
+export const COLOR_SEAT_STROKE = 0x94a3b8; // hollow seat outline (medium gray)
+export const COLOR_AISLE_LINE = 0xcbd5e1; // subtle aisle guide
+export const COLOR_DOOR = 0x374151; // forward boarding-door mark
 
 /** Component-wise linear interpolation between two packed RGB colours. */
 export function lerpColor(a: number, b: number, t: number): number {
