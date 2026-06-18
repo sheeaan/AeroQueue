@@ -25,7 +25,6 @@ import { HeatmapRenderer } from './HeatmapRenderer';
  * never triggers a React reconciliation.
  */
 export class SimulationRenderer {
-  private time = 0;
   private readonly resizeObserver: ResizeObserver;
   private lastCssW = 0;
 
@@ -135,8 +134,7 @@ export class SimulationRenderer {
 
   private readonly tick = (ticker: Ticker): void => {
     const dt = Math.min(0.05, ticker.deltaMS / 1000); // clamp tab-switch spikes
-    this.time += dt;
-    this.agents.update(dt, this.time);
+    this.agents.update(dt);
     this.heatmap.update(this.agents.currentAgents, dt);
   };
 

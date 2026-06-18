@@ -3,7 +3,7 @@ import type { Renderer } from 'pixi.js';
 import type { SnapshotAgent } from '@/simulation/engine/SimulationEngine';
 import { PassengerState } from '@/simulation/domain/state';
 import type { CabinAnatomy } from './CabinRenderer';
-import { COLOR_AGENT_ACCENT, COLOR_BLOCKED_FLASH, SEAT_COLORS } from './colors';
+import { COLOR_AGENT_OUTLINE, COLOR_BLOCKED, SEAT_COLORS } from './colors';
 import { AGENT_RADIUS, type CanvasGeometry } from './geometry';
 
 /** Exponential-smoothing rate for position interpolation (larger = snappier). */
@@ -12,6 +12,10 @@ const SMOOTH = 14;
 const ENTER_DURATION = 0.8;
 /** Spacing between passengers waiting single-file in the jet-bridge queue. */
 const QUEUE_SPACING = 13;
+/** Static ring radius for the Stowing / Blocked markers. */
+const MARKER_RADIUS = AGENT_RADIUS + 2;
+/** Static ring stroke width for the Stowing / Blocked markers. */
+const MARKER_STROKE_W = 2.5;
 
 type Phase = 'queued' | 'entering' | 'cabin';
 
@@ -29,26 +33,27 @@ interface AgentVisual {
   queueY: number;
   baseColor: number;
   state: PassengerState;
-  stowProgress: number;
+  /** Last state for which the static marker/tint was drawn (avoids per-frame redraw). */
+  markedState: PassengerState | null;
   phase: Phase;
   /** 0→1 progress along the jet-bridge entry path. */
   enterT: number;
 }
 
 /**
- * Owns the agent discs and animates them every Pixi tick.
+ * Owns the agent discs and animates only their *position* every Pixi tick.
  *
  * Boarding is visualised through the top-left jet bridge: `Queued` passengers
  * spawn at the gate and form a single-file line up the gangway above the forward
  * port door (ordered by boarding sequence). When the engine admits one, it walks
  * vertically DOWN the gangway, through the door, and turns 90° into the central
  * aisle, then hands off to engine-driven motion that carries it horizontally
- * RIGHT to its seat. Snapshots carry discrete cell positions; the per-frame
- * `update` lerps each disc toward its current target for smooth motion.
+ * RIGHT to its seat.
  *
- * Agents are flat, bright, solid discs (no gradients): a thick dark loading arc
- * marks the Stowing delay; a sharp amber fill + ring marks an aisle bottleneck
- * while Blocked.
+ * Per the NASA-diagram aesthetic the discs are flat and static: solid primary
+ * colours with NO gradients, glows, shadows, scaling, or pulsing. State is shown
+ * by a stark, static marker only — a black outline ring while Stowing, and a
+ * solid-yellow fill (plus ring) while Blocked.
  */
 export class AgentRenderer {
   readonly layer = new Container();
@@ -98,9 +103,11 @@ export class AgentRenderer {
         this.agents.set(agent.id, visual);
       }
       const color = SEAT_COLORS[agent.seatType];
-      if (visual.baseColor !== color) visual.baseColor = color;
+      if (visual.baseColor !== color) {
+        visual.baseColor = color;
+        visual.markedState = null; // force the tint to be re-applied
+      }
       visual.state = agent.state;
-      visual.stowProgress = agent.stowProgress;
 
       if (agent.state === PassengerState.Queued) {
         visual.phase = 'queued';
@@ -156,14 +163,14 @@ export class AgentRenderer {
       queueY: slot[1],
       baseColor: base,
       state: agent.state,
-      stowProgress: agent.stowProgress,
+      markedState: null,
       phase: queued ? 'queued' : 'cabin',
       enterT: queued ? 0 : 1,
     };
   }
 
-  /** Per-frame interpolation + state visualisation. `time` is seconds since start. */
-  update(dt: number, time: number): void {
+  /** Per-frame position interpolation. State visuals are static (set on change only). */
+  update(dt: number): void {
     const f = 1 - Math.exp(-dt * SMOOTH);
     for (const visual of this.agents.values()) {
       let tx: number;
@@ -187,7 +194,7 @@ export class AgentRenderer {
       visual.x += (tx - visual.x) * f;
       visual.y += (ty - visual.y) * f;
       visual.container.position.set(visual.x, visual.y);
-      this.applyState(visual, time);
+      this.applyState(visual);
     }
   }
 
@@ -211,51 +218,35 @@ export class AgentRenderer {
     return [e.doorX + (e.aisleX - e.doorX) * u, e.doorY + (e.aisleY - e.doorY) * u];
   }
 
-  private applyState(visual: AgentVisual, time: number): void {
+  /**
+   * Apply the static per-state appearance. Idempotent and only does GPU work when
+   * the state actually changes, so there is no per-frame animation of any kind.
+   */
+  private applyState(visual: AgentVisual): void {
+    if (visual.markedState === visual.state) return;
+    visual.markedState = visual.state;
+    visual.arc.clear();
+
     switch (visual.state) {
       case PassengerState.Stowing: {
-        // Emphasise the stow delay with a thick dark loading arc + gentle pulse.
-        visual.container.scale.set(1 + 0.14 * Math.sin(time * 8));
+        // Stowing at the row: a stark, static black outline ring.
         visual.body.tint = visual.baseColor;
-        visual.body.alpha = 1;
-        visual.arc.clear();
-        const start = -Math.PI / 2;
         visual.arc
-          .arc(0, 0, AGENT_RADIUS + 3, start, start + visual.stowProgress * Math.PI * 2)
-          .stroke({ width: 3.5, color: COLOR_AGENT_ACCENT, alpha: 1 });
+          .circle(0, 0, MARKER_RADIUS)
+          .stroke({ width: MARKER_STROKE_W, color: COLOR_AGENT_OUTLINE, alpha: 1 });
         break;
       }
       case PassengerState.Blocked: {
-        // Aisle interference → sharp amber fill + a thick ring marks the bottleneck.
-        visual.container.scale.set(1 + 0.06 * Math.sin(time * 12));
-        visual.body.tint = COLOR_BLOCKED_FLASH;
-        visual.body.alpha = 1;
-        visual.arc.clear();
+        // Aisle interference: turn solid yellow with a black ring (no animation).
+        visual.body.tint = COLOR_BLOCKED;
         visual.arc
-          .circle(0, 0, AGENT_RADIUS + 2.5)
-          .stroke({ width: 3, color: COLOR_AGENT_ACCENT, alpha: 1 });
-        break;
-      }
-      case PassengerState.Queued: {
-        visual.container.scale.set(0.8);
-        visual.body.tint = visual.baseColor;
-        visual.body.alpha = 0.65;
-        visual.arc.clear();
-        break;
-      }
-      case PassengerState.Seated: {
-        visual.container.scale.set(0.9);
-        visual.body.tint = visual.baseColor;
-        visual.body.alpha = 1;
-        visual.arc.clear();
+          .circle(0, 0, MARKER_RADIUS)
+          .stroke({ width: MARKER_STROKE_W, color: COLOR_AGENT_OUTLINE, alpha: 1 });
         break;
       }
       default: {
-        // Walking (incl. the jet-bridge entry walk)
-        visual.container.scale.set(1);
+        // Queued / Walking / Seated: a plain, flat, solid primary disc.
         visual.body.tint = visual.baseColor;
-        visual.body.alpha = 1;
-        visual.arc.clear();
       }
     }
   }

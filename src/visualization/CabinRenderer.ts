@@ -1,23 +1,13 @@
 import { Container, Graphics } from 'pixi.js';
 import type { CabinLayout } from '@/simulation/domain/Grid';
-import {
-  COLOR_AISLE_LINE,
-  COLOR_DOOR,
-  COLOR_HULL_FILL,
-  COLOR_HULL_STROKE,
-  COLOR_JETBRIDGE_FILL,
-  COLOR_JETBRIDGE_STROKE,
-  COLOR_SEAT_STROKE,
-  COLOR_WING_FILL,
-  COLOR_WING_STROKE,
-} from './colors';
+import { COLOR_DIAGRAM_FILL, COLOR_DIAGRAM_LINE } from './colors';
 import type { CanvasGeometry } from './geometry';
 
-// ── Flat airframe proportions (px) ────────────────────────────────────────────
-// Horizontal layout: NOSE points LEFT (small X), TAIL points RIGHT (large X);
-// the aisle runs along the centre in X. The silhouette is a simplified A320
-// vector outline — a blunt rounded nose, a uniform fuselage tube, swept-back
-// wings, and a gentle tail taper — drawn flat (light fill + thick dark stroke).
+// ── Diagram proportions (px) ──────────────────────────────────────────────────
+// Horizontal top-down schematic: NOSE points LEFT (small X), TAIL points RIGHT
+// (large X); the aisle runs along the centre in X. The silhouette is a highly
+// simplified A320 — a blunt rounded nose, a straight body, and simple swept
+// wings — drawn as hard black outlines over white, like a textbook figure.
 const NOSE_LEN = 70; // blunt, rounded nose (NOT a pointy cone)
 const NOSE_TIP_ROUND = 0.62; // tip bluntness (×bodyHalf); larger = blunter
 const TAIL_LEN = 120; // gentle tail taper
@@ -26,20 +16,23 @@ const BODY_PAD_Y = 8; // fuselage half-height beyond the outermost seats
 const BODY_PAD_FRONT = 44; // forward galley / boarding-door vestibule
 const BODY_PAD_REAR = 34; // aft galley / lav
 
-// Swept-back main wings. The plane points left, so the tips sweep toward the
-// RIGHT (aft). Drawn beneath the hull so the roots blend into the airframe.
+// Simple swept-back main wings. The plane points left, so the tips sweep toward
+// the RIGHT (aft). Drawn beneath the hull so the roots are hidden by its fill.
 const WING_ROOT_ROW = 12; // wing root begins mid-fuselage
 const WING_ROOT_CHORD = 104; // root chord along the fuselage
 const WING_TIP_CHORD = 26; // narrow tip chord (strong taper)
 const WING_SWEEP = 86; // how far the tip is swept aft (right)
-const WING_SPAN = 78; // long, blade-like wing reach beyond the fuselage
+const WING_SPAN = 78; // wing reach beyond the fuselage
 
 const JET_GATE_RISE = 58; // jet-bridge gate distance above the forward door
-const EDGE_PAD = 8; // bbox slack so thick outer strokes never clip
+const EDGE_PAD = 8; // bbox slack so the thick outer strokes never clip
 
+// Stroke weights (the spec calls for 2–3px hard black lines).
 const HULL_STROKE_W = 3;
-const WING_STROKE_W = 2.5;
-const JETBRIDGE_STROKE_W = 2.5;
+const WING_STROKE_W = 2;
+const JETBRIDGE_STROKE_W = 2;
+const SEAT_STROKE_W = 1.5;
+const AISLE_STROKE_W = 1.5;
 
 /** Jet-bridge waypoints (logical coords) shared with the agent entry animation. */
 export interface JetBridgePath {
@@ -125,8 +118,9 @@ export function computeAnatomy(geo: CanvasGeometry): CabinAnatomy {
 }
 
 /**
- * Builds the static airframe, drawn once (zero per-frame cost): wings → jet
- * bridge → fuselage hull → aisle → seats → forward door.
+ * Builds the static schematic, drawn once (zero per-frame cost): wings → jet
+ * bridge → fuselage hull → aisle → seats → forward door. All hard black lines
+ * over white.
  */
 export function createCabinLayer(
   cabin: CabinLayout,
@@ -164,7 +158,7 @@ export function createCabinLayer(
 
 /**
  * Simplified A320 fuselage: a blunt, rounded nose (left), a straight uniform
- * cabin tube, and a gentle tail taper (right). Flat light fill, thick outline.
+ * cabin tube, and a gentle tail taper (right). White fill, hard black outline.
  */
 function drawHull(g: Graphics, a: CabinAnatomy): void {
   const tailLen = a.tailTipX - a.bodyRightX;
@@ -212,11 +206,11 @@ function drawHull(g: Graphics, a: CabinAnatomy): void {
   );
   g.closePath();
 
-  g.fill({ color: COLOR_HULL_FILL, alpha: 1 });
-  g.stroke({ width: HULL_STROKE_W, color: COLOR_HULL_STROKE, alpha: 1, alignment: 0.5 });
+  g.fill({ color: COLOR_DIAGRAM_FILL, alpha: 1 });
+  g.stroke({ width: HULL_STROKE_W, color: COLOR_DIAGRAM_LINE, alpha: 1, alignment: 0.5 });
 }
 
-/** Swept-back main wings, mirrored above and below the fuselage. */
+/** Simple swept-back main wings, mirrored above and below the fuselage. */
 function drawWings(g: Graphics, geo: CanvasGeometry, a: CabinAnatomy): void {
   const xLE = geo.rowToX(WING_ROOT_ROW);
   drawWingPanel(g, xLE, a.bodyTop, -1);
@@ -233,58 +227,56 @@ function drawWingPanel(g: Graphics, xLE: number, edgeY: number, dir: number): vo
 
   g.moveTo(xLE, rootIn);
   g.lineTo(leTip, tipY); // leading edge, swept aft
-  g.quadraticCurveTo(leTip + WING_TIP_CHORD * 0.5, tipY + dir * 3, teTip, tipY); // rounded tip
+  g.lineTo(teTip, tipY); // straight tip chord (sharp, schematic)
   g.lineTo(teRoot, rootIn); // trailing edge
   g.closePath();
-  g.fill({ color: COLOR_WING_FILL, alpha: 1 });
-  g.stroke({ width: WING_STROKE_W, color: COLOR_WING_STROKE, alpha: 1, alignment: 0.5 });
+  g.fill({ color: COLOR_DIAGRAM_FILL, alpha: 1 });
+  g.stroke({ width: WING_STROKE_W, color: COLOR_DIAGRAM_LINE, alpha: 1, alignment: 0.5 });
 }
 
 /**
- * Jet bridge: a gate rotunda above the forward port door with a simple gangway
- * descending to it. Queued passengers walk down this gangway to board.
+ * Jet bridge: a simple rectangular gangway from a gate box down to the forward
+ * port door. Queued passengers walk down this gangway to board.
  */
 function drawJetBridge(g: Graphics, a: CabinAnatomy): void {
   const e = a.entry;
   const w = 14;
   // Vertical gangway from the gate down into the top of the fuselage.
-  g.roundRect(e.doorX - w / 2, e.gateY, w, e.doorY - e.gateY + 6, 3);
-  g.fill({ color: COLOR_JETBRIDGE_FILL, alpha: 1 });
-  g.stroke({ width: JETBRIDGE_STROKE_W, color: COLOR_JETBRIDGE_STROKE, alpha: 1, alignment: 0.5 });
+  g.rect(e.doorX - w / 2, e.gateY, w, e.doorY - e.gateY + 6);
+  g.fill({ color: COLOR_DIAGRAM_FILL, alpha: 1 });
+  g.stroke({ width: JETBRIDGE_STROKE_W, color: COLOR_DIAGRAM_LINE, alpha: 1, alignment: 0.5 });
 
-  // Gate rotunda where passengers spawn.
-  g.roundRect(e.gateX - 19, e.gateY - 12, 38, 22, 6);
-  g.fill({ color: COLOR_JETBRIDGE_FILL, alpha: 1 });
-  g.stroke({ width: JETBRIDGE_STROKE_W, color: COLOR_JETBRIDGE_STROKE, alpha: 1, alignment: 0.5 });
+  // Gate box where passengers spawn.
+  g.rect(e.gateX - 19, e.gateY - 12, 38, 22);
+  g.fill({ color: COLOR_DIAGRAM_FILL, alpha: 1 });
+  g.stroke({ width: JETBRIDGE_STROKE_W, color: COLOR_DIAGRAM_LINE, alpha: 1, alignment: 0.5 });
 }
 
-/** Thin centre-aisle reference line. */
+/** Thin black centre-aisle reference line. */
 function drawAisle(g: Graphics, geo: CanvasGeometry, a: CabinAnatomy): void {
   g.moveTo(a.gridLeftX, geo.colToY(geo.aisleColIndex));
   g.lineTo(a.gridRightX, geo.colToY(geo.aisleColIndex));
-  g.stroke({ width: 2, color: COLOR_AISLE_LINE, alpha: 1 });
+  g.stroke({ width: AISLE_STROKE_W, color: COLOR_DIAGRAM_LINE, alpha: 1 });
 }
 
 /**
- * Seats as simple, clean, hollow rounded squares (stroke only) with a few px of
- * padding between each, so the grid stays legible without competing with the
- * bright agents.
+ * Seats as strict, sharp-cornered black rectangles (no rounding), hollow, with
+ * a few px of padding between each so the grid stays legible.
  */
 function drawSeats(g: Graphics, cabin: CabinLayout, geo: CanvasGeometry): void {
   const gap = 6; // ~3px of padding on each side between neighbouring seats
   const size = geo.cell - gap;
-  const r = 4;
 
   for (const seat of cabin.seats) {
     const x = geo.rowToX(seat.coord.row) - size / 2;
     const y = geo.colToY(seat.coord.col) - size / 2;
-    g.roundRect(x, y, size, size, r);
+    g.rect(x, y, size, size); // sharp rectangle — deliberately not roundRect
   }
-  g.stroke({ width: 1.5, color: COLOR_SEAT_STROKE, alpha: 1 });
+  g.stroke({ width: SEAT_STROKE_W, color: COLOR_DIAGRAM_LINE, alpha: 1 });
 }
 
-/** A simple forward boarding-door mark where the jet bridge meets the fuselage. */
+/** A simple solid-black forward boarding-door mark where the jet bridge meets the hull. */
 function drawDoor(g: Graphics, a: CabinAnatomy): void {
-  g.roundRect(a.entry.doorX - 9, a.bodyTop - 2, 18, 4, 1.5);
-  g.fill({ color: COLOR_DOOR, alpha: 1 });
+  g.rect(a.entry.doorX - 9, a.bodyTop - 2, 18, 4);
+  g.fill({ color: COLOR_DIAGRAM_LINE, alpha: 1 });
 }
