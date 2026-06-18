@@ -13,39 +13,54 @@ import { HeatmapRenderer } from './HeatmapRenderer';
  * layers (static cabin → heatmap overlay → agents), and runs a single Pixi
  * ticker that interpolates agents and repaints the heatmap at 60 FPS.
  *
- * It consumes the engine through the decoupled pull channel: `applySnapshot` is
+ * Sizing uses **mathematical letterbox scaling**: the scene is authored in a
+ * fixed logical coordinate space (the aircraft + jet-bridge bounding box) and
+ * the whole `world` container is scaled by `min(w/logicalW, h/logicalH)` and
+ * centred on every resize, so the entire horizontal plane always fits the
+ * canvas with zero clipping at 100% browser zoom.
+ *
+ * The engine is consumed through the decoupled pull channel: `applySnapshot` is
  * fed by `useSimulationFrames`, never via React state — so the animation loop
  * never triggers a React reconciliation.
  */
 export class SimulationRenderer {
   private time = 0;
+  private readonly resizeObserver: ResizeObserver;
+  private lastCssW = 0;
 
   private constructor(
     private readonly app: Application,
+    private readonly host: HTMLElement,
     private readonly world: Container,
     private readonly agents: AgentRenderer,
     private readonly heatmap: HeatmapRenderer,
+    private readonly logicalWidth: number,
+    private readonly logicalHeight: number,
+    private readonly minX: number,
+    private readonly minY: number,
   ) {
     this.app.ticker.add(this.tick);
+    this.layout();
+    this.resizeObserver = new ResizeObserver(() => this.layout());
+    this.resizeObserver.observe(host);
   }
 
   static async create(host: HTMLElement, cabin: CabinLayout): Promise<SimulationRenderer> {
     const geo = createGeometry(cabin);
     const anatomy = computeAnatomy(geo);
     const { bbox } = anatomy;
-    const PAD = 14;
 
-    // Horizontal layout (nose left, tail right). The internal canvas is the
-    // content bounding box at a high resolution; CSS scales the <canvas> down to
-    // fit its container (object-fit), so the whole aircraft is visible and crisp
-    // at 100% browser zoom. Wide-and-short fits the canvas column naturally.
-    const width = bbox.maxX - bbox.minX + PAD * 2;
-    const height = bbox.maxY - bbox.minY + PAD * 2;
+    // Logical scene size: full aircraft length (+ jet-bridge) × wingspan (+ pad).
+    const logicalWidth = bbox.maxX - bbox.minX;
+    const logicalHeight = bbox.maxY - bbox.minY;
+
+    const initialW = Math.max(320, host.clientWidth || 800);
+    const initialH = Math.max(1, Math.round((initialW * logicalHeight) / logicalWidth));
 
     const app = new Application();
     await app.init({
-      width,
-      height,
+      width: initialW,
+      height: initialH,
       background: COLOR_CABIN_BG,
       backgroundAlpha: 1,
       antialias: true,
@@ -55,18 +70,15 @@ export class SimulationRenderer {
     });
 
     const canvas = app.canvas as HTMLCanvasElement;
+    canvas.style.display = 'block';
     canvas.style.width = '100%';
     canvas.style.height = 'auto';
-    canvas.style.maxHeight = '76vh';
-    canvas.style.objectFit = 'contain';
-    canvas.style.display = 'block';
-    canvas.style.margin = '0 auto';
     host.appendChild(canvas);
 
-    // Offset the world so the content bbox sits inside the padded canvas. Agents
-    // and the heatmap are children of `world`, so their geo mapping is preserved.
+    // Everything lives in `world` in logical coordinates; the layout pass scales
+    // and centres it. Agents and the heatmap are children so their geo mapping
+    // is preserved through the scale.
     const world = new Container();
-    world.position.set(PAD - bbox.minX, PAD - bbox.minY);
     app.stage.addChild(world);
 
     world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static aircraft + cabin
@@ -75,7 +87,40 @@ export class SimulationRenderer {
     const agents = new AgentRenderer(geo, anatomy, app.renderer);
     world.addChild(agents.layer); // 3. agents on top
 
-    return new SimulationRenderer(app, world, agents, heatmap);
+    return new SimulationRenderer(
+      app,
+      host,
+      world,
+      agents,
+      heatmap,
+      logicalWidth,
+      logicalHeight,
+      bbox.minX,
+      bbox.minY,
+    );
+  }
+
+  /**
+   * Resize the renderer to the host width and letterbox the logical scene into
+   * it: scale = min(w/logicalW, h/logicalH), then centre.
+   */
+  private layout(): void {
+    const cssW = this.host.clientWidth;
+    if (!cssW) return;
+    // The canvas height follows the logical aspect ratio so the wide plane sits
+    // in a tidy band; guard against re-entrant resize from our own height change.
+    if (Math.abs(cssW - this.lastCssW) < 0.5) return;
+    this.lastCssW = cssW;
+
+    const cssH = Math.max(1, Math.round((cssW * this.logicalHeight) / this.logicalWidth));
+    this.app.renderer.resize(cssW, cssH);
+
+    const scale = Math.min(cssW / this.logicalWidth, cssH / this.logicalHeight);
+    this.world.scale.set(scale);
+    this.world.position.set(
+      (cssW - this.logicalWidth * scale) / 2 - this.minX * scale,
+      (cssH - this.logicalHeight * scale) / 2 - this.minY * scale,
+    );
   }
 
   /** Feed the latest engine snapshot to the agent + heatmap layers. */
@@ -96,6 +141,11 @@ export class SimulationRenderer {
 
   /** Robust teardown (safe under React strict-mode double-invocation). */
   destroy(): void {
+    try {
+      this.resizeObserver.disconnect();
+    } catch {
+      /* ignore */
+    }
     try {
       this.app.ticker.remove(this.tick);
     } catch {

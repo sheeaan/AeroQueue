@@ -38,12 +38,13 @@ interface AgentVisual {
 /**
  * Owns the agent sprites and animates them every Pixi tick.
  *
- * Boarding is visualised through the jet bridge: `Queued` passengers form a
- * single-file line at the gate (ordered by boarding sequence). When the engine
- * admits one, it walks the gangway, enters the Row 0 door, and turns 90° into
- * the central aisle before handing off to normal engine-driven aisle movement.
- * Snapshots carry discrete cell positions; the per-frame `update` lerps the
- * sprite toward its current target for smooth motion.
+ * Boarding is visualised through the top-left jet bridge: `Queued` passengers
+ * form a single-file line up the gangway above the forward port door (ordered
+ * by boarding sequence). When the engine admits one, it walks vertically DOWN
+ * the gangway, through the door, and turns 90° into the central aisle, then
+ * hands off to engine-driven motion that carries it horizontally RIGHT to its
+ * seat. Snapshots carry discrete cell positions; the per-frame `update` lerps
+ * the sprite toward its current target for smooth motion.
  */
 export class AgentRenderer {
   readonly layer = new Container();

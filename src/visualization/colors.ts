@@ -16,20 +16,30 @@ export const COLOR_BLOCKED_FLASH = 0xffffff;
 
 export const COLOR_CABIN_BG = 0x0b1120;
 
-// ── Aircraft anatomy (seat-map blueprint) ─────────────────────────────
-export const COLOR_HULL_FILL = 0x26344f; // visible slate fuselage
-export const COLOR_HULL_STROKE = 0x6a86b8; // bright blueprint outline
-export const COLOR_WING_FILL = 0x39455f; // muted grey wing shading
-export const COLOR_WING_STROKE = 0x52668c;
-export const COLOR_JETBRIDGE_FILL = 0x2c3a57;
+// ── Aircraft anatomy (airline seat-map blueprint) ─────────────────────
+// Tuned to read like a professional cabin diagram (AeroLOPA / SeatGuru) on the
+// dark page: a near-black fuselage tube, a crisp metallic edge, swept-back
+// brushed-metal wings, and crisp per-type seat blocks.
+export const COLOR_HULL_FILL = 0x111a2c; // near-black fuselage interior
+export const COLOR_HULL_STROKE = 0x8aa4cf; // crisp metallic hull edge
+export const COLOR_WING_FILL = 0x3f4f6e; // brushed-metal wing
+export const COLOR_WING_STROKE = 0x59719c; // wing edge
+export const COLOR_WING_SHEEN = 0x6b80a6; // wing highlight
+export const COLOR_JETBRIDGE_FILL = 0x28324d; // jet-bridge gangway
 export const COLOR_JETBRIDGE_STROKE = 0x5a76a8;
-export const COLOR_DOOR = 0x9fd2ff;
-export const COLOR_SEAT_FILL = 0x223a5e;
-export const COLOR_SEAT_OUTLINE = 0x4f74ab; // light blue seat blocks
-export const COLOR_FIXTURE = 0x37456a; // galley / lavatory blocks
-export const COLOR_AISLE_LINE = 0x4a5f8a;
+export const COLOR_DOOR = 0xbfe0ff;
+export const COLOR_SEAT_OUTLINE = 0x6a93cf; // light-blue seat outline
+export const COLOR_FIXTURE = 0x33446a; // galley / lavatory blocks
+export const COLOR_AISLE_LINE = 0x556e9d;
 export const COLOR_EXIT = 0x49c46a;
 export const COLOR_COCKPIT = 0x9fd2ff;
+
+/** Seat fill by lateral type — muted, professional, light→dark window→aisle. */
+export const SEAT_TYPE_COLORS: Record<SeatColumnType, number> = {
+  window: 0x456c93, // steel blue
+  middle: 0x375573, // muted blue
+  aisle: 0x2c3c54, // dark slate
+};
 
 /** Component-wise linear interpolation between two packed RGB colours. */
 export function lerpColor(a: number, b: number, t: number): number {
