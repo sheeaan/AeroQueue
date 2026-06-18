@@ -1,19 +1,28 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ComparativeBarChart } from '@/components/ComparativeBarChart';
 import { DistributionChart } from '@/components/DistributionChart';
 import { useSimulationContext } from '@/components/SimulationProvider';
 import type { MonteCarloResult } from '@/simulation/analysis/statistics';
+import type { SeatId } from '@/simulation/domain/ids';
 import { DEFAULT_STRATEGIES } from '@/simulation/strategies';
 import type { StrategyId } from '@/simulation/strategies/BoardingStrategy';
 import { useSimulationStore } from '@/state/simulationStore';
-import type { EvolveRequest, MonteCarloRequest, WorkerResponse } from '@/workers/monteCarlo.worker';
+import type {
+  CompareRequest,
+  CompareRow,
+  EvolveRequest,
+  MonteCarloRequest,
+  WorkerResponse,
+} from '@/workers/monteCarlo.worker';
 
 const ITERATIONS = 1000;
+const COMPARE_ITERATIONS = 80;
 const GA_GENERATIONS = 60;
 const GA_POPULATION = 60;
 
-type Activity = 'idle' | 'monte-carlo' | 'evolve';
+type Activity = 'idle' | 'monte-carlo' | 'evolve' | 'compare';
 
 interface ResultMeta {
   strategyId: StrategyId;
@@ -52,6 +61,9 @@ export function AnalyticsDashboard() {
   const [meta, setMeta] = useState<ResultMeta | null>(null);
   const [gaStatus, setGaStatus] = useState<{ generation: number; total: number; best: number } | null>(null);
   const [ga, setGa] = useState<GaSummary | null>(null);
+  const [compare, setCompare] = useState<{ rows: CompareRow[]; freeBoardingTicks: number; isSimpleMode: boolean } | null>(null);
+  // The GA-evolved order, captured so "Compare All" can include it as a contender.
+  const customOrderRef = useRef<SeatId[] | null>(null);
 
   useEffect(() => {
     const worker = new Worker(new URL('../workers/monteCarlo.worker.ts', import.meta.url), {
@@ -82,6 +94,7 @@ export function AnalyticsDashboard() {
         case 'evolve-done':
           // Load the fittest sequence into the live visualizer as the 'custom' strategy.
           controller.loadCustomOrder(message.order);
+          customOrderRef.current = message.order;
           setStrategy('custom');
           setGa({
             fitness: message.fitness,
@@ -89,6 +102,18 @@ export function AnalyticsDashboard() {
             generations: message.history.length,
           });
           setGaStatus(null);
+          setProgress(1);
+          setActivity('idle');
+          break;
+        case 'compare-progress':
+          setProgress(message.completed / message.total);
+          break;
+        case 'compare-done':
+          setCompare({
+            rows: message.rows,
+            freeBoardingTicks: message.freeBoardingTicks,
+            isSimpleMode: message.isSimpleMode,
+          });
           setProgress(1);
           setActivity('idle');
           break;
@@ -135,6 +160,24 @@ export function AnalyticsDashboard() {
     worker.postMessage(request);
   };
 
+  const runCompare = () => {
+    const worker = workerRef.current;
+    if (busy || !worker) return;
+    setActivity('compare');
+    setProgress(0);
+    setCompare(null);
+    const strategyIds: StrategyId[] = DEFAULT_STRATEGIES.map((strategy) => strategy.id);
+    if (customOrderRef.current) strategyIds.push('custom');
+    const request: CompareRequest = {
+      kind: 'compare',
+      strategyIds,
+      iterations: COMPARE_ITERATIONS,
+      isSimpleMode,
+      customOrder: customOrderRef.current ?? undefined,
+    };
+    worker.postMessage(request);
+  };
+
   const stale = useMemo(
     () => meta !== null && (meta.strategyId !== strategyId || meta.isSimpleMode !== isSimpleMode),
     [meta, strategyId, isSimpleMode],
@@ -161,6 +204,10 @@ export function AnalyticsDashboard() {
           : '🧬 Evolve Optimal Sequence'}
       </button>
 
+      <button className="run-button compare-button" onClick={runCompare} disabled={busy}>
+        {activity === 'compare' ? `Comparing… ${pct}%` : '📊 Compare All Strategies'}
+      </button>
+
       {busy && (
         <div className="progress" role="progressbar" aria-valuenow={pct}>
           <div className="progress-fill" style={{ width: `${pct}%` }} />
@@ -183,6 +230,16 @@ export function AnalyticsDashboard() {
 
       {result && result.runs > 0 && samples && (
         <MonteCarloResultView result={result} samples={samples} meta={meta} stale={stale} />
+      )}
+
+      {compare && compare.rows.length > 0 && (
+        <div className="compare-result">
+          <p className="analytics-for">
+            Mean boarding time μ · {compare.rows[0].runs} runs ·{' '}
+            {compare.isSimpleMode ? 'Simple' : 'Realism'} mode
+          </p>
+          <ComparativeBarChart rows={compare.rows} freeBoardingTicks={compare.freeBoardingTicks} />
+        </div>
       )}
     </section>
   );

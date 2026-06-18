@@ -62,9 +62,7 @@ const INITIAL_COARSE: SimulationCoarse = {
 export const useSimulationStore = create<SimulationUiState>((set) => ({
   ...INITIAL_COARSE,
   strategyId: 'steffen-perfect',
-  // Off by default so the canvas loads as a sterile black-and-white diagram; the
-  // congestion overlay (a colour gradient) is opt-in via the ControlPanel toggle.
-  showHeatmap: false,
+  showHeatmap: true,
   isSimpleMode: false,
   monteCarlo: null,
 

@@ -6,9 +6,9 @@ import type { StrategyId } from '@/simulation/strategies/BoardingStrategy';
 import { useSimulationStore } from '@/state/simulationStore';
 
 const SEAT_LEGEND: ReadonlyArray<{ label: string; className: string }> = [
-  { label: 'Moving', className: 'dot-moving' },
-  { label: 'Stow / Blocked', className: 'dot-held' },
-  { label: 'Seat', className: 'dot-seat' },
+  { label: 'Window', className: 'dot-window' },
+  { label: 'Middle', className: 'dot-middle' },
+  { label: 'Aisle', className: 'dot-aisle' },
 ];
 
 /**

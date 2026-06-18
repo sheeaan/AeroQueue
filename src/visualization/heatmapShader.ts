@@ -50,9 +50,9 @@ uniform sampler2D uTexture;
 
 vec3 congestionRamp(float t)
 {
-    vec3 cool = vec3(0.16, 0.78, 0.42); // free-flowing  (green)
-    vec3 warm = vec3(0.98, 0.82, 0.22); // moderate      (yellow)
-    vec3 hot  = vec3(0.96, 0.22, 0.18); // severe         (red)
+    vec3 cool = vec3(0.18, 0.74, 0.70); // free-flowing  (teal)
+    vec3 warm = vec3(0.96, 0.70, 0.30); // moderate      (amber)
+    vec3 hot  = vec3(0.95, 0.42, 0.45); // severe         (rose)
     vec3 c = mix(cool, warm, smoothstep(0.0, 0.5, t));
     return mix(c, hot, smoothstep(0.5, 1.0, t));
 }
@@ -60,10 +60,11 @@ vec3 congestionRamp(float t)
 void main(void)
 {
     float intensity = texture(uTexture, vTextureCoord).r;
-    float alpha = smoothstep(0.05, 0.85, intensity);
+    // Soft, professional overlay: a gentle alpha ramp and a low global cap so the
+    // congestion field reads as a subtle tint, never a glowing neon blob.
+    float alpha = smoothstep(0.10, 0.95, intensity);
     vec3 color = congestionRamp(clamp(intensity, 0.0, 1.0));
-    // Pre-multiplied output, globally damped so the overlay tints rather than hides.
-    finalColor = vec4(color * alpha, alpha) * 0.85;
+    finalColor = vec4(color * alpha, alpha) * 0.5;
 }
 `;
 
