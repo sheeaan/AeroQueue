@@ -217,7 +217,7 @@ export function AnalyticsDashboard() {
   return (
     <section className="analytics">
       <div className="analytics-head">
-        <h2 className="analytics-title">Monte-Carlo Analytics</h2>
+        <h2 className="analytics-title">Analytics</h2>
         <p className="analytics-sub">
           {strategyName(strategyId)} · {isSimpleMode ? 'Simple' : 'Realism'} mode
         </p>

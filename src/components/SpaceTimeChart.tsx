@@ -37,47 +37,44 @@ export function SpaceTimeChart({
   rows: number;
   boardingTime: number;
 }) {
-  const lines = useMemo(() => {
-    const span = boardingTime || 1;
-    const rowSpan = Math.max(1, rows - 1);
-    const xOf = (t: number) => PAD_L + (t / span) * PLOT_W;
-    const yOf = (row: number) => BASE_Y - (row / rowSpan) * PLOT_H;
-    return trajectories.map((tr) => ({
+  const { lines, rowTicks, timeTicks } = useMemo(() => {
+    const xOf = (t: number) => PAD_L + (t / (boardingTime || 1)) * PLOT_W;
+    const yOf = (row: number) => BASE_Y - (row / Math.max(1, rows - 1)) * PLOT_H;
+
+    const lines = trajectories.map((tr) => ({
       id: tr.id,
       color: SEAT_COLOR[tr.seatType],
       points: tr.points.map((p) => `${xOf(p.t).toFixed(1)},${yOf(p.row).toFixed(1)}`).join(' '),
     }));
+
+    const rowTicks: Array<{ r: number; y: number }> = [];
+    for (let r = 0; r <= rows - 1; r += 5) rowTicks.push({ r, y: yOf(r) });
+    const timeTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => {
+      const t = Math.round(boardingTime * f);
+      return { t, x: xOf(t) };
+    });
+
+    return { lines, rowTicks, timeTicks };
   }, [trajectories, rows, boardingTime]);
 
   if (trajectories.length === 0) return null;
-
-  const rowSpan = Math.max(1, rows - 1);
-  const yOf = (row: number) => BASE_Y - (row / rowSpan) * PLOT_H;
-  const xOf = (t: number) => PAD_L + (t / (boardingTime || 1)) * PLOT_W;
-
-  const rowTicks: number[] = [];
-  for (let r = 0; r <= rows - 1; r += 5) rowTicks.push(r);
-  const timeTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(boardingTime * f));
 
   return (
     <div className="spacetime-chart">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Space-time diagram of passenger rows over time">
         {/* row gridlines + labels */}
-        {rowTicks.map((r) => {
-          const y = yOf(r);
-          return (
-            <g key={`r${r}`}>
-              <line x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} className="cmp-grid" />
-              <text x={PAD_L - 5} y={y + 3} className="cmp-ylabel" textAnchor="end">
-                {r}
-              </text>
-            </g>
-          );
-        })}
+        {rowTicks.map(({ r, y }) => (
+          <g key={`r${r}`}>
+            <line x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} className="cmp-grid" />
+            <text x={PAD_L - 5} y={y + 3} className="cmp-ylabel" textAnchor="end">
+              {r}
+            </text>
+          </g>
+        ))}
 
         {/* time tick labels */}
-        {timeTicks.map((t, i) => (
-          <text key={`t${i}`} x={xOf(t)} y={BASE_Y + 13} className="cmp-xlabel" textAnchor="middle">
+        {timeTicks.map(({ t, x }, i) => (
+          <text key={`t${i}`} x={x} y={BASE_Y + 13} className="cmp-xlabel" textAnchor="middle">
             {t}
           </text>
         ))}
