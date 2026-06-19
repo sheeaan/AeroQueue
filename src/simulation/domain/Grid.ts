@@ -36,10 +36,8 @@ export interface CabinLayout {
 /**
  * Mutable occupancy layer over a {@link CabinLayout}.
  *
- * The aisle is stored as a dense 1-D array indexed by row, so that "is the cell
- * directly ahead free?" — the inner loop of every kinematic step — is an `O(1)`
- * lookup rather than an `O(N)` scan of all agents. This is the spatial-hash
- * optimisation that keeps a full run at `O(N log N)`.
+ * The aisle is a dense array indexed by row, so checking "is the cell ahead
+ * free?" (done on every step) is an O(1) lookup instead of scanning all agents.
  */
 export class CabinGrid {
   private readonly aisle: Array<PassengerId | null>;

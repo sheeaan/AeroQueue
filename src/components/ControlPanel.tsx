@@ -12,9 +12,8 @@ const SEAT_LEGEND: ReadonlyArray<{ label: string; className: string }> = [
 ];
 
 /**
- * React/Zustand control surface overlaying the canvas. Strategy selection,
- * transport controls, and the heatmap toggle all flow through the coarse store —
- * none of them participate in the 60 FPS render loop.
+ * Controls below the canvas: strategy select, Realism/Simple toggle,
+ * play/pause/reset, the heatmap toggle, and the live readouts.
  */
 export function ControlPanel() {
   const { play, pause, reset, selectStrategy, setSimpleMode, strategyId } = useSimulation();

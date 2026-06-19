@@ -15,21 +15,11 @@ export type FrameListener = (snapshot: SimulationSnapshot) => void;
 export type CoarseSink = (coarse: SimulationCoarse) => void;
 
 /**
- * Browser-side conductor that bridges the pure {@link SimulationEngine} to the
- * UI without contaminating the engine with browser concerns.
- *
- * Responsibilities:
- *   - Own the `requestAnimationFrame` playback loop (the engine itself has no
- *     concept of wall-clock time).
- *   - Convert real elapsed time × playback speed into a simulation-time target
- *     and advance the engine to it once per frame.
- *   - Fan out the resulting {@link SimulationSnapshot} to imperative frame
- *     listeners (e.g. the PixiJS renderer) — bypassing React entirely.
- *   - Push only coarse lifecycle state into the Zustand store.
- *
- * This is the "robust subscription bridge" between the mathematical engine and
- * the rendering layer: high-frequency data flows through `onFrame`, low-
- * frequency data flows through the coarse sink.
+ * Drives the {@link SimulationEngine} for the UI. It owns the
+ * requestAnimationFrame loop, advances the engine by (real elapsed time × speed)
+ * each frame, sends every {@link SimulationSnapshot} to frame listeners (the
+ * PixiJS renderer), and pushes coarse state (status, time, counts) to the store.
+ * The engine has no concept of wall-clock time, so all of that lives here.
  */
 export class SimulationController {
   readonly engine: SimulationEngine;

@@ -4,14 +4,12 @@ import type { StrategyId } from '@/simulation/strategies/BoardingStrategy';
 import { SimulationStatus } from '@/simulation/domain/state';
 
 /**
- * "Coarse" state mirrored out of the engine for React consumption.
+ * Coarse engine state for the React UI.
  *
- * Critically, this does **not** include the per-agent snapshot. Pushing
- * hundreds of agent positions through React/Zustand every frame would trigger a
- * reconciliation storm and defeat the whole point of the PixiJS canvas. The
- * high-frequency agent stream is delivered straight to the renderer via the
- * controller's imperative `onFrame` channel; only these low-frequency,
- * dashboard-relevant fields live in the store.
+ * This intentionally leaves out the per-agent snapshot: pushing hundreds of
+ * agent positions through React every frame would be far too slow. Those go
+ * straight to the renderer via the controller's `onFrame` callback; only these
+ * low-frequency fields (status, time, counts, toggles) live in the store.
  */
 export interface SimulationCoarse {
   status: SimulationStatus;

@@ -41,10 +41,9 @@ function strategyName(id: StrategyId): string {
 }
 
 /**
- * Statistical analytics + optimization panel. Offloads both the Monte-Carlo
- * batch and the Genetic-Algorithm search to the Web Worker, visualises the
- * resulting boarding-time distribution, and loads the GA's fittest sequence
- * straight into the live visualizer.
+ * Analytics panel: runs the Monte-Carlo batch, the all-strategy comparison, and
+ * the genetic-algorithm search in the Web Worker, shows the resulting charts, and
+ * loads the GA's best sequence into the live view.
  */
 export function AnalyticsDashboard() {
   const controller = useSimulationContext();

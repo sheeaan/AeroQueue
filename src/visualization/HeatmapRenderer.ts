@@ -13,19 +13,15 @@ const RISE = 2.4;
 const BLOB_CELLS = 3.4;
 
 /**
- * Real-time congestion heatmap using a two-pass, GPU-friendly pipeline:
+ * Congestion heatmap over the aisle, drawn in two passes:
  *
- *   Pass 1 — additive accumulation: one soft blob per aisle row is drawn into an
- *            off-screen {@link RenderTexture} with `blendMode = 'add'`, so
- *            overlapping congestion *sums* into a single intensity field. Only
- *            ~`rows` sprites are ever drawn — never hundreds of overlapping
- *            translucent sprites on the visible stage.
- *   Pass 2 — gradient mapping: the on-stage sprite that displays that texture
- *            carries a custom WebGL filter ({@link createHeatmapFilter}) that
- *            recolours the accumulated intensity green → yellow → red.
+ *   Pass 1: draw one soft blob per aisle row into an off-screen RenderTexture
+ *           with additive blending, so overlapping congestion sums up.
+ *   Pass 2: a custom WebGL filter ({@link createHeatmapFilter}) recolours that
+ *           intensity to the congestion gradient.
  *
- * Temporal smoothing/decay lives in a small CPU array so a cleared bottleneck
- * fades out rather than snapping off.
+ * A small CPU array holds the per-row heat and decays it each frame so a cleared
+ * bottleneck fades out instead of snapping off.
  */
 export class HeatmapRenderer {
   readonly sprite: Sprite;

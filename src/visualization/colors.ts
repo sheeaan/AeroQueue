@@ -1,7 +1,6 @@
 /**
- * Palette for the raw "NASA FoilSim" wind-tunnel aesthetic: a pitch-black field,
- * a pure cyan wireframe lattice, and passengers as stark high-contrast squares.
- * No gradients, glows, tints, or interpolation helpers — only hard hex values.
+ * Canvas colors (FoilSim-style): black background, cyan seat grid, and
+ * white/yellow passenger squares.
  */
 
 /** Pitch-black application background (the wind-tunnel view). */

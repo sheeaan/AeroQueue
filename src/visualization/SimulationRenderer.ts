@@ -9,20 +9,14 @@ import { createGeometry } from './geometry';
 import { HeatmapRenderer } from './HeatmapRenderer';
 
 /**
- * Top-level PixiJS orchestrator. Owns the `Application`, composes the three
- * layers (static lattice → heatmap overlay → agents), and runs a single Pixi
- * ticker that interpolates agents and repaints the heatmap at 60 FPS.
+ * Sets up the PixiJS Application and the three layers (grid → heatmap → agents),
+ * and runs one ticker that interpolates the agents and repaints the heatmap.
  *
- * Sizing uses **mathematical letterbox scaling** (an object-fit: contain in
- * logical space): the scene is authored in a fixed logical coordinate space (the
- * lattice + entry-runway bounding box, a long narrow rectangle) and the whole
- * `world` container is scaled by `min(w/logicalW, h/logicalH)` and centred on
- * every resize, so the entire row-by-column grid always fits the canvas with
- * zero clipping at 100% browser zoom.
- *
- * The engine is consumed through the decoupled pull channel: `applySnapshot` is
- * fed by `useSimulationFrames`, never via React state — so the animation loop
- * never triggers a React reconciliation.
+ * Sizing is a letterbox fit: everything is drawn in a fixed logical coordinate
+ * space, and on each resize the `world` container is scaled by
+ * `min(w/logicalW, h/logicalH)` and centred, so the whole grid always fits with
+ * no clipping. Snapshots arrive through `applySnapshot` (driven by the frame
+ * hook), not React state, so the animation loop never re-renders React.
  */
 export class SimulationRenderer {
   private readonly resizeObserver: ResizeObserver;

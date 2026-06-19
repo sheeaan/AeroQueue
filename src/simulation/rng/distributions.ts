@@ -2,11 +2,9 @@ import type { StowageParams, WalkingParams } from '../config/simulation';
 import type { Random } from './Random';
 
 /**
- * Probability-distribution samplers for the stochastic agent vector.
- *
- * These model "human noise" — the single most important ingredient that makes
- * the simulation's variance realistic (a deterministic model would rank every
- * strategy by a single number and miss the operational-robustness story).
+ * Random samplers for the per-passenger attributes used in Realism mode
+ * (walking speed, bag count, stow time). They add the human variation that gives
+ * the simulation realistic spread; Simple mode skips them.
  */
 
 /**

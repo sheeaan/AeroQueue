@@ -1,20 +1,15 @@
 import type { CabinLayout } from '@/simulation/domain/Grid';
 
 /**
- * Maps the discrete simulation grid `(row, col)` onto canvas pixels.
- *
- * Orientation is top-down with the fuselage laid out horizontally: the cabin's
- * long axis (rows, front → rear) runs along **X**, and the seat columns + aisle
- * stack along **Y**. The central aisle is therefore a horizontal band through
- * the middle of the canvas, which is where the congestion heatmap is painted.
+ * Maps a grid cell (row, col) to canvas pixels. Rows run along X (front to rear),
+ * the seat columns + aisle stack along Y, so the aisle is a horizontal band
+ * through the middle.
  */
 
-/** Pixels per grid cell (uniform on both axes). */
-export const CELL = 26;
-/** Outer padding around the cabin, in pixels. */
-export const MARGIN = 30;
-/** Rendered agent radius, in pixels. */
-export const AGENT_RADIUS = 8;
+/** Pixels per grid cell. */
+const CELL = 26;
+/** Padding around the grid, in pixels. */
+const MARGIN = 30;
 
 export interface CanvasGeometry {
   readonly cell: number;

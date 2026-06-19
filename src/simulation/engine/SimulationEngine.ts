@@ -17,10 +17,9 @@ import { EventQueue } from './EventQueue';
 /** Floor on walking velocity to keep `1 / v` travel time finite. */
 const MIN_WALK_SPEED = 1e-3;
 
-// ── Render-facing projections ────────────────────────────────────────────────
-// Deliberately flat, primitive-only structures so the rendering layer (PixiJS)
-// never touches a live engine object. A snapshot is a *value*, safe to hand to
-// another thread, memoise, or diff.
+// ── Snapshots handed to the renderer ─────────────────────────────────────────
+// Plain value objects (no live engine references), so they're safe to pass to
+// the renderer or another thread.
 
 /** One agent as the visualiser needs to draw it. */
 export interface SnapshotAgent {
@@ -62,23 +61,20 @@ export type EngineLifecycle = 'initialized' | 'started' | 'completed' | 'reset';
 export type EngineListener = (event: EngineLifecycle, engine: SimulationEngine) => void;
 
 /**
- * Pure, headless, deterministic discrete-event simulation engine with full
- * cellular-automata kinematics.
+ * Discrete-event boarding simulation.
  *
- * Spatial model: the aisle is a 1-D array indexed by row (0 = front/door,
- * `R-1` = rear). Passengers enter at the front and translate toward higher row
- * indices — a single-file corridor with no overtaking. Three interference
- * mechanisms emerge from local rules:
+ * The aisle is a 1-D array indexed by row (0 = front/door, R-1 = rear).
+ * Passengers enter at the front and move toward higher rows, single-file with no
+ * overtaking. Three kinds of interference fall out of the local rules:
  *
- *   1. **Movement** — an agent may occupy row `r+1` only if that cell is free.
- *   2. **Aisle interference** — a `Stowing` agent occupies its aisle cell,
- *      forcing trailing agents to `Blocked` at `r-1`; blocks cascade rearward.
- *   3. **Seat interference** — entering a seat past `k` already-seated neighbours
- *      adds an over-climb penalty `k · (t_clear + t_sit)` to the
- *      `Stowing → Seated` transition.
+ *   1. Movement — an agent can enter row r+1 only if that cell is free.
+ *   2. Aisle interference — a Stowing agent occupies its aisle cell, so the
+ *      agents behind it become Blocked; blocks cascade rearward.
+ *   3. Seat interference — taking a seat past k already-seated neighbours adds an
+ *      over-climb penalty k · (t_clear + t_sit) to the Stowing → Seated step.
  *
- * The engine carries no browser/React/Pixi dependency, so it runs identically on
- * the main thread, in a Web Worker, or under a unit test.
+ * It has no browser/React/Pixi dependency, so it runs the same on the main
+ * thread, in a Web Worker, or in a script.
  */
 export class SimulationEngine {
   private readonly grid: CabinGrid;
@@ -412,9 +408,8 @@ export class SimulationEngine {
 
     const penalty = this.computeSeatPenalty(passenger);
     passenger.metrics.seatShuffleTicks += penalty;
-    // The passenger keeps occupying the aisle cell throughout the shuffle, so the
-    // over-climb continues to block trailing traffic — exactly the secondary
-    // aisle interference the over-climb generates.
+    // The passenger keeps the aisle cell during the shuffle, so the over-climb
+    // also blocks the agents behind them.
     this.schedule(penalty, SimulationEventType.Seated, passenger.id);
   }
 

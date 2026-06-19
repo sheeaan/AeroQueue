@@ -1,16 +1,7 @@
 import { EngineeringNotebook } from '@/components/EngineeringNotebook';
 import { SimulationView } from '@/components/SimulationView';
 
-/**
- * Phase 4 — refined two-column layout, deterministic Simple Mode, and the
- * background Monte-Carlo analytics worker.
- *
- * The aircraft canvas is never covered: controls and analytics live in a
- * dedicated sidebar. The Monte-Carlo dashboard offloads 1000 headless runs to a
- * Web Worker and reports the mean (μ) and variance (σ²) for the selected
- * strategy — letting you contrast a strategy's "textbook" determinism (Simple)
- * against its real-world spread (Realism).
- */
+/** Home page: the boarding simulation on top, its controls, then the analytics. */
 export default function Home() {
   return (
     <main className="shell">

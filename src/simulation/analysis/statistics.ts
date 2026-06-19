@@ -1,9 +1,4 @@
-/**
- * Pure statistical aggregation for Monte-Carlo validation.
- *
- * Shared verbatim between the Web-Worker shard runner and the UI dashboard so
- * that "what the worker computed" and "what the chart shows" can never diverge.
- */
+/** Summary statistics for a batch of Monte-Carlo boarding-time samples. */
 
 /** Aggregate summary of a batch of boarding-time samples. */
 export interface MonteCarloResult {
@@ -19,7 +14,7 @@ export interface MonteCarloResult {
   readonly max: number;
 }
 
-export function mean(samples: ReadonlyArray<number>): number {
+function mean(samples: ReadonlyArray<number>): number {
   if (samples.length === 0) return 0;
   let sum = 0;
   for (const x of samples) sum += x;
@@ -27,7 +22,7 @@ export function mean(samples: ReadonlyArray<number>): number {
 }
 
 /** Unbiased (n − 1) sample variance. */
-export function variance(samples: ReadonlyArray<number>, precomputedMean?: number): number {
+function variance(samples: ReadonlyArray<number>, precomputedMean?: number): number {
   const n = samples.length;
   if (n < 2) return 0;
   const m = precomputedMean ?? mean(samples);

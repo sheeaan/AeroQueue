@@ -32,15 +32,12 @@ interface AgentVisual {
 }
 
 /**
- * Owns the agent squares and animates only their *position* every Pixi tick.
+ * Owns the agent squares and moves them each Pixi tick.
  *
- * Passengers are raw data points: solid, sharp white squares moving through the
- * lattice, turning solid yellow while Stowing or aisle-Blocked. There are no
- * gradients, halos, outlines, scaling, or pulsing of any kind. `Queued`
- * passengers marshal in a single-file line to the LEFT of the grid along the
- * aisle row (ordered by boarding sequence) and stream RIGHT into the lattice
- * under engine-driven motion. Snapshots carry discrete cell positions; the
- * per-frame `update` lerps each square toward its current target.
+ * Each passenger is a small square: white while moving, yellow while Stowing or
+ * Blocked. Queued passengers line up to the left of the grid along the aisle row
+ * (in boarding order) and move right into the grid. Snapshots give discrete cell
+ * positions; `update` smooths each square toward its target.
  */
 export class AgentRenderer {
   readonly layer = new Container();

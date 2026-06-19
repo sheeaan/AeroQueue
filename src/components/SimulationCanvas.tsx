@@ -7,15 +7,13 @@ import { useSimulationStore } from '@/state/simulationStore';
 import { SimulationRenderer } from '@/visualization/SimulationRenderer';
 
 /**
- * Mounts the PixiJS renderer and bridges it to the engine via the decoupled
- * `useSimulationFrames` pull channel.
+ * Mounts the PixiJS renderer and feeds it engine snapshots via
+ * `useSimulationFrames`.
  *
- * This module (and therefore PixiJS) is only ever loaded client-side — the page
- * imports it through `next/dynamic({ ssr: false })`, so the WebGL stack never
- * runs during server rendering. The renderer is created asynchronously
- * (`Application.init` is async in Pixi v8); a `disposed` guard handles the case
- * where the effect is torn down before initialisation resolves (React strict
- * mode), and snapshots are routed to whatever renderer instance currently exists.
+ * Loaded client-side only (the page imports it with `next/dynamic({ ssr:false })`)
+ * because PixiJS needs the DOM/WebGL. `Application.init` is async, so the
+ * `disposed` guard covers the case where the effect is cleaned up before init
+ * resolves (React strict mode).
  */
 export function SimulationCanvas() {
   const controller = useSimulationContext();

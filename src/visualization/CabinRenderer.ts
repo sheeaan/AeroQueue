@@ -4,10 +4,8 @@ import { COLOR_AISLE_DASH, COLOR_GRID } from './colors';
 import type { CanvasGeometry } from './geometry';
 
 // ── Grid metrics (px) ─────────────────────────────────────────────────────────
-// There is deliberately NO aircraft here — no hull, nose, tail, wings, or jet
-// bridge. The cabin is reduced to a pure mathematical lattice: rows run along X
-// (front → rear), the seat columns + aisle stack along Y, and the central aisle
-// is empty corridor marked by a dashed line.
+// The cabin is just a grid of seat cells: rows along X (front → rear), seat
+// columns + aisle along Y. The aisle row has no seats and is drawn as a dashed line.
 const SEAT_GAP = 6; // padding so each seat cell reads as a discrete site
 const GRID_PAD = 12; // gap between the outermost cells and the bbox edge
 const ENTRY_RUNWAY = 120; // staging length to the left where queued agents marshal

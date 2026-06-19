@@ -1,14 +1,13 @@
 /**
- * Headless analytics Web Worker — Monte-Carlo batches and the Genetic-Algorithm
- * optimizer. Both run the pure TypeScript engine off the main thread so the UI
- * stays responsive; only progress/results are posted back.
+ * Web Worker for the heavy analytics — Monte-Carlo batches, the comparison
+ * batch, and the genetic-algorithm optimizer. These run the engine off the main
+ * thread and post progress/results back.
  *
- * Instantiate (Next.js-compatible) with:
+ * Created with:
  *   new Worker(new URL('../workers/monteCarlo.worker.ts', import.meta.url), { type: 'module' })
  *
- * The heavy logic lives in pure functions ({@link runMonteCarlo}, {@link evolveOrder})
- * so it is Node-testable; the message glue at the bottom only activates inside a
- * real worker scope.
+ * The work lives in plain functions (runMonteCarlo, runCompare, evolveOrder); the
+ * message handling at the bottom only runs inside an actual worker.
  */
 import { summarize } from '@/simulation/analysis/statistics';
 import type { MonteCarloResult } from '@/simulation/analysis/statistics';
