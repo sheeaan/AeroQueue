@@ -78,7 +78,7 @@ export class SimulationRenderer {
     world.addChild(createCabinLayer(cabin, geo, anatomy)); // 1. static lattice
     const heatmap = new HeatmapRenderer(geo, app.renderer);
     world.addChild(heatmap.sprite); // 2. congestion overlay
-    const agents = new AgentRenderer(geo, anatomy, app.renderer);
+    const agents = new AgentRenderer(geo, anatomy);
     world.addChild(agents.layer); // 3. agents on top
 
     return new SimulationRenderer(

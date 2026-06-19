@@ -29,8 +29,10 @@ export interface SnapshotAgent {
   readonly state: PassengerState;
   readonly seatType: SeatColumnType;
   readonly side: CabinSide;
-  /** Stow completion in [0, 1] for the countdown-arc indicator. */
+  /** Stow completion in [0, 1] — drives the bottom-up fill while stowing. */
   readonly stowProgress: number;
+  /** Stow time left, in ticks (0 unless stowing) — drives the numeric countdown. */
+  readonly stowRemaining: number;
   readonly bagCount: number;
 }
 
@@ -514,6 +516,7 @@ export class SimulationEngine {
         seatType: seat.type,
         side: seat.side,
         stowProgress: this.stowProgressOf(passenger),
+        stowRemaining: this.stowRemainingOf(passenger),
         bagCount: passenger.bagCount,
       });
     }
@@ -527,12 +530,19 @@ export class SimulationEngine {
     };
   }
 
-  /** Stow-arc fill ∈ [0, 1], derived from elapsed clock for smooth interpolation. */
+  /** Stow fill ∈ [0, 1], derived from the elapsed clock for smooth interpolation. */
   private stowProgressOf(passenger: Passenger): number {
     if (passenger.state === PassengerState.Seated) return 1;
     if (passenger.state !== PassengerState.Stowing || passenger.stowTime <= 0) return 0;
     const start = this.stowStartedAt.get(passenger.id) ?? this.clock;
     return Math.min(1, (this.clock - start) / passenger.stowTime);
+  }
+
+  /** Stow time remaining in ticks (0 unless actively stowing). */
+  private stowRemainingOf(passenger: Passenger): number {
+    if (passenger.state !== PassengerState.Stowing || passenger.stowTime <= 0) return 0;
+    const start = this.stowStartedAt.get(passenger.id) ?? this.clock;
+    return Math.max(0, passenger.stowTime - (this.clock - start));
   }
 
   private result(): RunResult {
