@@ -662,8 +662,9 @@ code {
 
 .cmp-legend {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 6px 14px;
   font-size: 11px;
   color: var(--muted);
 }
@@ -688,6 +689,28 @@ code {
 
 .cmp-swatch-base {
   background: #ff0000;
+}
+
+.cmp-family-legend {
+  margin-top: 4px;
+}
+
+/* ── Space-time diagram (black plotter, reuses the cmp-* axis styles) ──── */
+.spacetime-result {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spacetime-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-width: 980px;
+  background: #000000;
+  border: 1px solid var(--border);
+  border-radius: 0;
 }
 
 /* ── Engineering Notebook modal ──────────────────────────────────────── */

@@ -1,7 +1,8 @@
-import { Application, Container } from 'pixi.js';
+import { Application, Container, Text, TextStyle } from 'pixi.js';
 import type { Ticker } from 'pixi.js';
 import type { CabinLayout } from '@/simulation/domain/Grid';
 import type { SimulationSnapshot } from '@/simulation/engine/SimulationEngine';
+import { PassengerState, SimulationStatus } from '@/simulation/domain/state';
 import { AgentRenderer } from './AgentRenderer';
 import { computeAnatomy, createCabinLayer } from './CabinRenderer';
 import { COLOR_CABIN_BG } from './colors';
@@ -28,6 +29,7 @@ export class SimulationRenderer {
     private readonly world: Container,
     private readonly agents: AgentRenderer,
     private readonly heatmap: HeatmapRenderer,
+    private readonly hud: Text,
     private readonly logicalWidth: number,
     private readonly logicalHeight: number,
     private readonly minX: number,
@@ -81,12 +83,23 @@ export class SimulationRenderer {
     const agents = new AgentRenderer(geo, anatomy);
     world.addChild(agents.layer); // 3. agents on top
 
+    // Telemetry HUD: screen-fixed (added to the stage, not `world`), so it does
+    // not scale with the letterbox. Updated from each snapshot in applySnapshot.
+    const hud = new Text({
+      text: '',
+      style: new TextStyle({ fontFamily: 'Courier New', fontSize: 12, fill: 0xffffff, lineHeight: 15 }),
+      resolution: 2,
+    });
+    hud.position.set(8, 6);
+    app.stage.addChild(hud);
+
     return new SimulationRenderer(
       app,
       host,
       world,
       agents,
       heatmap,
+      hud,
       logicalWidth,
       logicalHeight,
       bbox.minX,
@@ -117,9 +130,42 @@ export class SimulationRenderer {
     );
   }
 
-  /** Feed the latest engine snapshot to the agent + heatmap layers. */
+  /** Feed the latest engine snapshot to the agent + heatmap layers and the HUD. */
   applySnapshot(snapshot: SimulationSnapshot): void {
     this.agents.setSnapshot(snapshot.agents);
+    this.updateHud(snapshot);
+  }
+
+  /** Refresh the on-canvas telemetry readout from the snapshot. */
+  private updateHud(s: SimulationSnapshot): void {
+    const rows = s.aisleHeat.length || 1;
+    let stows = 0;
+    let blocked = 0;
+    let inAisle = 0;
+    for (const a of s.agents) {
+      if (a.state === PassengerState.Stowing) stows++;
+      else if (a.state === PassengerState.Blocked) blocked++;
+      const active =
+        a.state === PassengerState.Walking ||
+        a.state === PassengerState.Blocked ||
+        a.state === PassengerState.Stowing;
+      if (active && a.row >= 0 && a.row < rows) inAisle++;
+    }
+    const density = inAisle / rows;
+
+    let sys: string;
+    if (s.status === SimulationStatus.Completed) sys = 'COMPLETE';
+    else if (blocked >= 3 || density > 0.5) sys = 'CONGESTED';
+    else if (inAisle > 0) sys = 'BOARDING';
+    else sys = 'IDLE';
+
+    this.hud.text =
+      `T_TICK: ${Math.floor(s.time).toString().padStart(4, '0')}\n` +
+      `AISLE_DENSITY: ${density.toFixed(2)}\n` +
+      `ACTIVE_STOWS: ${stows}\n` +
+      `BLOCKED: ${blocked}\n` +
+      `SYS_STATE: ${sys}\n` +
+      `BOARDED: ${s.seatedCount}/${s.totalPassengers}`;
   }
 
   setHeatmapVisible(visible: boolean): void {

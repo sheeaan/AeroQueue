@@ -13,7 +13,9 @@ import { summarize } from '@/simulation/analysis/statistics';
 import type { MonteCarloResult } from '@/simulation/analysis/statistics';
 import { DEFAULT_SIMULATION_CONFIG } from '@/simulation/config/simulation';
 import type { SimulationConfig } from '@/simulation/config/simulation';
+import type { SeatColumnType } from '@/simulation/domain/geometry';
 import type { SeatId } from '@/simulation/domain/ids';
+import { PassengerState, SimulationStatus } from '@/simulation/domain/state';
 import { SimulationEngine } from '@/simulation/engine/SimulationEngine';
 import {
   DEFAULT_GA_OPTIONS,
@@ -51,7 +53,17 @@ export interface CompareRequest {
   baseSeed?: number;
 }
 
-export type WorkerRequest = MonteCarloRequest | EvolveRequest | CompareRequest;
+/** Run one simulation and record each passenger's aisle row over time, for the space-time chart. */
+export interface TrajectoryRequest {
+  kind: 'trajectory';
+  strategyId: StrategyId;
+  isSimpleMode: boolean;
+  /** Explicit order for the 'custom' (GA-evolved) strategy. */
+  customOrder?: SeatId[];
+  baseSeed?: number;
+}
+
+export type WorkerRequest = MonteCarloRequest | EvolveRequest | CompareRequest | TrajectoryRequest;
 
 // ── Response protocol (discriminated by `type`) ───────────────────────────────
 export interface MonteCarloProgress {
@@ -112,13 +124,31 @@ export interface CompareDone {
   isSimpleMode: boolean;
 }
 
+/** One passenger's path through the aisle: a polyline of (tick, row) samples. */
+export interface Trajectory {
+  id: number;
+  seatType: SeatColumnType;
+  points: Array<{ t: number; row: number }>;
+}
+
+export interface TrajectoryDone {
+  type: 'trajectory-done';
+  trajectories: Trajectory[];
+  /** Cabin row count, for the chart's Y scale. */
+  rows: number;
+  boardingTime: number;
+  strategyId: StrategyId;
+  isSimpleMode: boolean;
+}
+
 export type WorkerResponse =
   | MonteCarloProgress
   | MonteCarloDone
   | EvolveProgress
   | EvolveDone
   | CompareProgress
-  | CompareDone;
+  | CompareDone
+  | TrajectoryDone;
 
 export interface MonteCarloRun {
   result: MonteCarloResult;
@@ -298,6 +328,61 @@ export function runCompare(
   };
 }
 
+/**
+ * Run one simulation and sample each passenger's aisle row over time, for the
+ * space-time diagram: walking shows as a sloped line, stowing/blocking as flat.
+ */
+export function runTrajectory(request: TrajectoryRequest): TrajectoryDone {
+  registerDefaultStrategies();
+  const cabin = DEFAULT_SIMULATION_CONFIG.cabin;
+  const baseSeed = request.baseSeed ?? 0xc0ffee;
+
+  let order: SeatId[];
+  if (request.strategyId === 'custom') {
+    order = request.customOrder ? request.customOrder.slice() : cabin.seats.map((seat) => seat.id);
+  } else {
+    const strategy = getStrategy(request.strategyId);
+    order = strategy ? strategy.generateOrder(cabin, new Random(baseSeed)) : cabin.seats.map((s) => s.id);
+  }
+
+  const config: SimulationConfig = {
+    ...DEFAULT_SIMULATION_CONFIG,
+    seed: baseSeed + ATTRIBUTE_SEED_OFFSET,
+    simpleMode: request.isSimpleMode,
+  };
+  const engine = new SimulationEngine(config);
+  engine.initialize(order);
+
+  const SAMPLE = 3; // ticks between samples
+  const MAX_T = 20000; // safety cap so a stuck run can never loop forever
+  const byId = new Map<number, Trajectory>();
+
+  for (let t = SAMPLE; t <= MAX_T; t += SAMPLE) {
+    engine.advanceTo(t);
+    const snap = engine.getSnapshot();
+    for (const a of snap.agents) {
+      const moving =
+        a.state === PassengerState.Walking ||
+        a.state === PassengerState.Blocked ||
+        a.state === PassengerState.Stowing;
+      if (!moving) continue;
+      let tr = byId.get(a.id);
+      if (!tr) byId.set(a.id, (tr = { id: a.id, seatType: a.seatType, points: [] }));
+      tr.points.push({ t, row: a.row });
+    }
+    if (snap.status === SimulationStatus.Completed) break;
+  }
+
+  return {
+    type: 'trajectory-done',
+    trajectories: [...byId.values()].filter((tr) => tr.points.length > 0),
+    rows: cabin.rows,
+    boardingTime: engine.currentTime,
+    strategyId: request.strategyId,
+    isSimpleMode: request.isSimpleMode,
+  };
+}
+
 // ── Worker glue (only activates inside a DedicatedWorkerGlobalScope) ──────────
 if (typeof self !== 'undefined' && typeof (self as unknown as Worker).postMessage === 'function') {
   const ctx = self as unknown as Worker;
@@ -338,6 +423,11 @@ if (typeof self !== 'undefined' && typeof (self as unknown as Worker).postMessag
         ctx.postMessage({ type: 'compare-progress', completed, total } satisfies CompareProgress),
       );
       ctx.postMessage(done satisfies CompareDone);
+      return;
+    }
+
+    if (request.kind === 'trajectory') {
+      ctx.postMessage(runTrajectory(request) satisfies TrajectoryDone);
     }
   };
 }

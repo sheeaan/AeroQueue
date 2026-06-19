@@ -15,17 +15,22 @@ import type { CompareRow } from '@/workers/monteCarlo.worker';
  * makes it fully responsive inside the analytics panel.
  */
 
-/** Bright categorical palette (raw OR-study plotter), assigned per sorted bar. */
-const BAR_PALETTE = [
-  '#ff7f0e', // orange
-  '#1f77b4', // blue
-  '#2ca02c', // green
-  '#ffd400', // yellow
-  '#9467bd', // violet
-  '#17becf', // cyan
-  '#e377c2', // pink
-  '#d62728', // red
-];
+/**
+ * Strategies grouped into algorithmic families, each with a strict colour, so a
+ * family (e.g. both outside-in heuristics) reads as one colour — like the
+ * reference OR study.
+ */
+const FAMILY: Record<string, { family: string; color: string }> = {
+  random: { family: 'Baseline (random)', color: '#9ca3af' }, // gray
+  'front-to-back': { family: 'Fixed zone (by-row)', color: '#1f77b4' }, // blue
+  'back-to-front': { family: 'Fixed zone (by-row)', color: '#1f77b4' },
+  wilma: { family: 'Outside-in heuristic', color: '#2ca02c' }, // green
+  'reverse-pyramid': { family: 'Outside-in heuristic', color: '#2ca02c' },
+  'steffen-perfect': { family: 'Optimal (Steffen)', color: '#ffb000' }, // gold
+  custom: { family: 'Metaheuristic (GA)', color: '#9467bd' }, // violet
+};
+const DEFAULT_FAMILY = { family: 'Other', color: '#9ca3af' };
+const familyOf = (id: string) => FAMILY[id] ?? DEFAULT_FAMILY;
 
 const W = 600;
 const H = 320;
@@ -70,6 +75,16 @@ export function ComparativeBarChart({
   const barW = Math.min(46, slot * 0.62);
   const baselineY = yOf(freeBoardingTicks);
 
+  // Unique algorithmic families present, in display order, for the legend.
+  const familyLegend: Array<{ family: string; color: string }> = [];
+  const seenFamily = new Set<string>();
+  for (const row of sorted) {
+    const f = familyOf(row.strategyId);
+    if (seenFamily.has(f.family)) continue;
+    seenFamily.add(f.family);
+    familyLegend.push(f);
+  }
+
   return (
     <div className="compare-chart">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Mean boarding time by strategy">
@@ -91,7 +106,7 @@ export function ComparativeBarChart({
           const cx = PAD_L + slot * (i + 0.5);
           const x = cx - barW / 2;
           const top = yOf(row.mean);
-          const color = BAR_PALETTE[i % BAR_PALETTE.length];
+          const color = familyOf(row.strategyId).color;
           const hi = yOf(row.mean + row.stdDev);
           const lo = yOf(Math.max(0, row.mean - row.stdDev));
           const cap = Math.min(7, barW / 2.5);
@@ -141,6 +156,13 @@ export function ComparativeBarChart({
         <span>
           <span className="cmp-swatch cmp-swatch-base" /> free boarding
         </span>
+      </div>
+      <div className="cmp-legend cmp-family-legend">
+        {familyLegend.map((f) => (
+          <span key={f.family}>
+            <span className="cmp-swatch" style={{ background: f.color }} /> {f.family}
+          </span>
+        ))}
       </div>
     </div>
   );

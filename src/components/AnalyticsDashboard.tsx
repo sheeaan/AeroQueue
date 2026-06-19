@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ComparativeBarChart } from '@/components/ComparativeBarChart';
 import { DistributionChart } from '@/components/DistributionChart';
+import { SpaceTimeChart } from '@/components/SpaceTimeChart';
 import { useSimulationContext } from '@/components/SimulationProvider';
 import type { MonteCarloResult } from '@/simulation/analysis/statistics';
 import type { SeatId } from '@/simulation/domain/ids';
@@ -14,6 +15,8 @@ import type {
   CompareRow,
   EvolveRequest,
   MonteCarloRequest,
+  Trajectory,
+  TrajectoryRequest,
   WorkerResponse,
 } from '@/workers/monteCarlo.worker';
 
@@ -22,7 +25,7 @@ const COMPARE_ITERATIONS = 80;
 const GA_GENERATIONS = 60;
 const GA_POPULATION = 60;
 
-type Activity = 'idle' | 'monte-carlo' | 'evolve' | 'compare';
+type Activity = 'idle' | 'monte-carlo' | 'evolve' | 'compare' | 'trajectory';
 
 interface ResultMeta {
   strategyId: StrategyId;
@@ -61,7 +64,8 @@ export function AnalyticsDashboard() {
   const [gaStatus, setGaStatus] = useState<{ generation: number; total: number; best: number } | null>(null);
   const [ga, setGa] = useState<GaSummary | null>(null);
   const [compare, setCompare] = useState<{ rows: CompareRow[]; freeBoardingTicks: number; isSimpleMode: boolean } | null>(null);
-  // The GA-evolved order, captured so "Compare All" can include it as a contender.
+  const [spacetime, setSpacetime] = useState<{ trajectories: Trajectory[]; rows: number; boardingTime: number; strategyId: StrategyId; isSimpleMode: boolean } | null>(null);
+  // The GA-evolved order, captured so "Compare All" / "Space-Time" can use it.
   const customOrderRef = useRef<SeatId[] | null>(null);
 
   useEffect(() => {
@@ -111,6 +115,17 @@ export function AnalyticsDashboard() {
           setCompare({
             rows: message.rows,
             freeBoardingTicks: message.freeBoardingTicks,
+            isSimpleMode: message.isSimpleMode,
+          });
+          setProgress(1);
+          setActivity('idle');
+          break;
+        case 'trajectory-done':
+          setSpacetime({
+            trajectories: message.trajectories,
+            rows: message.rows,
+            boardingTime: message.boardingTime,
+            strategyId: message.strategyId,
             isSimpleMode: message.isSimpleMode,
           });
           setProgress(1);
@@ -177,6 +192,21 @@ export function AnalyticsDashboard() {
     worker.postMessage(request);
   };
 
+  const runTrajectory = () => {
+    const worker = workerRef.current;
+    if (busy || !worker) return;
+    setActivity('trajectory');
+    setProgress(0);
+    setSpacetime(null);
+    const request: TrajectoryRequest = {
+      kind: 'trajectory',
+      strategyId,
+      isSimpleMode,
+      customOrder: strategyId === 'custom' ? customOrderRef.current ?? undefined : undefined,
+    };
+    worker.postMessage(request);
+  };
+
   const stale = useMemo(
     () => meta !== null && (meta.strategyId !== strategyId || meta.isSimpleMode !== isSimpleMode),
     [meta, strategyId, isSimpleMode],
@@ -208,6 +238,10 @@ export function AnalyticsDashboard() {
 
         <button className="run-button compare-button" onClick={runCompare} disabled={busy}>
           {activity === 'compare' ? `Comparing… ${pct}%` : '📊 Compare All Strategies'}
+        </button>
+
+        <button className="run-button spacetime-button" onClick={runTrajectory} disabled={busy}>
+          {activity === 'trajectory' ? 'Tracing…' : '📈 Space-Time Diagram'}
         </button>
       </div>
 
@@ -246,6 +280,21 @@ export function AnalyticsDashboard() {
           </div>
         )}
       </div>
+
+      {spacetime && spacetime.trajectories.length > 0 && (
+        <div className="spacetime-result">
+          <p className="analytics-for">
+            Space-time diagram · {strategyName(spacetime.strategyId)} ·{' '}
+            {spacetime.isSimpleMode ? 'Simple' : 'Realism'} mode · boarding time{' '}
+            {spacetime.boardingTime.toFixed(0)} ticks
+          </p>
+          <SpaceTimeChart
+            trajectories={spacetime.trajectories}
+            rows={spacetime.rows}
+            boardingTime={spacetime.boardingTime}
+          />
+        </div>
+      )}
     </section>
   );
 }
