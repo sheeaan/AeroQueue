@@ -8,7 +8,6 @@ export default function Home() {
       <header className="site-header">
         <div className="site-header-inner">
           <a className="brand" href="#top">
-            <span className="brand-badge">AQ</span>
             <span className="brand-name">
               <strong>AeroQueue</strong>
               <span>Boarding Research Lab</span>
