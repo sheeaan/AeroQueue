@@ -7,8 +7,9 @@ import { useSimulationStore } from '@/state/simulationStore';
 
 const SEAT_LEGEND: ReadonlyArray<{ label: string; className: string }> = [
   { label: 'Moving', className: 'dot-moving' },
-  { label: 'Stow / Blocked', className: 'dot-held' },
-  { label: 'Seat', className: 'dot-seat' },
+  { label: 'Stowing', className: 'dot-stow' },
+  { label: 'Blocked', className: 'dot-blocked' },
+  { label: 'Over-climb', className: 'dot-overclimb' },
 ];
 
 /**

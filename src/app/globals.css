@@ -1,8 +1,8 @@
 /*
- * Raw "NASA FoilSim" engineering-applet aesthetic: a sterile light page with
- * hard 1px black borders, square corners, no shadows, no rounded anything, and
- * plain system fonts. All colour lives in the data (the black wind-tunnel canvas
- * and the blue/black plotters); the chrome stays deliberately grey and flat.
+ * NASA Glenn "Beginner's Guide" educational aesthetic: a white page with a dark
+ * full-width header bar, serif body copy and titles, blue sub-headings, and flat
+ * sterile panels with hard 1px borders and square corners. The colour lives in
+ * the data — the black wind-tunnel canvas and the blue/black analytics plotters.
  */
 :root {
   --bg: #ffffff; /* page */
@@ -11,12 +11,9 @@
   --border: #000000; /* hard black borders */
   --text: #000000; /* black text */
   --muted: #333333; /* secondary text */
-  --accent: #0000ff; /* blue */
-  --heading: #0000ee; /* standard unstyled web-blue headings */
-  --serif: Georgia, 'Times New Roman', Times, serif; /* educational body copy */
-  --window: #0000ff;
-  --middle: #008000;
-  --aisle: #ff0000;
+  --accent: #0000ff; /* blue accents (links, progress, active toggle) */
+  --heading: #0000ee; /* blue sub-headings */
+  --serif: Georgia, 'Times New Roman', Times, serif; /* body copy + page title */
 }
 
 * {
@@ -156,20 +153,6 @@ h1 {
   font-family: var(--serif);
 }
 
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  padding: 16px 18px;
-}
-
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 18px;
-}
-
 /* ── System form controls (default, unstyled look) ───────────────────── */
 button {
   font-family: Arial, Helvetica, sans-serif;
@@ -204,33 +187,6 @@ select {
   border-radius: 0;
   padding: 2px 4px;
   cursor: pointer;
-}
-
-.metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 12px;
-}
-
-.metric {
-  background: var(--cell);
-  border: 1px solid var(--border);
-  padding: 12px;
-}
-
-.metric .label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.metric .value {
-  font-family: 'Courier New', monospace;
-  font-size: 22px;
-  font-weight: bold;
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
 }
 
 .note {
@@ -437,13 +393,16 @@ code {
   background: #ffffff;
 }
 
-.dot-held {
+.dot-stow {
   background: #ffff00;
 }
 
-.dot-seat {
-  background: #000000;
-  border-color: #00aaaa;
+.dot-blocked {
+  background: #ff0000;
+}
+
+.dot-overclimb {
+  background: #ff8c00;
 }
 
 /* ── Monte-Carlo analytics dashboard ─────────────────────────────────── */
