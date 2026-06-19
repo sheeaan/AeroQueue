@@ -30,7 +30,7 @@ export function EngineeringNotebook() {
   return (
     <>
       <button className="notebook-button secondary" onClick={() => setOpen(true)}>
-        📓 Engineering Notebook
+        📓 my math
       </button>
 
       {open && (
@@ -39,11 +39,11 @@ export function EngineeringNotebook() {
             className="modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Engineering Notebook"
+            aria-label="my math"
             onClick={(e) => e.stopPropagation()}
           >
             <header className="modal-header">
-              <h2>Engineering Notebook</h2>
+              <h2>my math</h2>
               <button className="modal-close" onClick={() => setOpen(false)} aria-label="Close">
                 ✕
               </button>
