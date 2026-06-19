@@ -29,7 +29,7 @@ export function SimulationView() {
   return (
     <SimulationProvider>
       <div className="lab">
-        <div className="lab-stage">
+        <div className="lab-stage" id="simulation">
           <div className="stage">
             <SimulationCanvas />
           </div>
@@ -37,7 +37,7 @@ export function SimulationView() {
         <div className="lab-controls">
           <ControlPanel />
         </div>
-        <div className="lab-analysis">
+        <div className="lab-analysis" id="analysis">
           <AnalyticsDashboard />
         </div>
       </div>
