@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "benchmark": "tsx scripts/benchmark.ts",
     "verify:phase2": "tsx scripts/phase2-harness.ts",
     "verify:phase4": "tsx scripts/phase4-harness.ts",
     "verify:phase5": "tsx scripts/phase5-harness.ts"
