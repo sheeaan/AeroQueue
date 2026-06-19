@@ -16,8 +16,9 @@ const SEAT_LEGEND: ReadonlyArray<{ label: string; className: string }> = [
  * play/pause/reset, the heatmap toggle, and the live readouts.
  */
 export function ControlPanel() {
-  const { play, pause, reset, selectStrategy, setSimpleMode, strategyId } = useSimulation();
+  const { play, pause, reset, setSpeed, selectStrategy, setSimpleMode, strategyId } = useSimulation();
   const status = useSimulationStore((s) => s.status);
+  const speed = useSimulationStore((s) => s.speed);
   const time = useSimulationStore((s) => s.time);
   const seatedCount = useSimulationStore((s) => s.seatedCount);
   const totalPassengers = useSimulationStore((s) => s.totalPassengers);
@@ -66,6 +67,20 @@ export function ControlPanel() {
           Reset
         </button>
       </div>
+
+      <label className="speed-control">
+        <span className="speed-label">Speed</span>
+        <input
+          type="range"
+          min={0.25}
+          max={8}
+          step={0.25}
+          value={speed}
+          onChange={(event) => setSpeed(Number(event.target.value))}
+          aria-label="Simulation speed"
+        />
+        <span className="speed-value">{speed}×</span>
+      </label>
 
       <label className="toggle">
         <input type="checkbox" checked={showHeatmap} onChange={toggleHeatmap} />
